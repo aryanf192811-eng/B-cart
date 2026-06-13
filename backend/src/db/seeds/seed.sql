@@ -55,7 +55,10 @@ INSERT INTO customers (name, email, phone, address, gst_number) VALUES
 INSERT INTO work_centers (code, name, capacity_per_hour, hourly_cost) VALUES
   ('WC-ASM', 'Assembly Line', 2, 500.00),
   ('WC-PNT', 'Paint Floor', 1, 350.00),
-  ('WC-PKG', 'Packaging', 4, 200.00);
+  ('WC-PKG', 'Packaging', 4, 200.00),
+  ('WC-QC', 'QC Lab', 5, 450.00),
+  ('WC-CNC', 'CNC Machining', 3, 850.00),
+  ('WC-WLD', 'Welding Station', 2, 600.00);
 
 -- ============================================================
 -- Product Categories (3)

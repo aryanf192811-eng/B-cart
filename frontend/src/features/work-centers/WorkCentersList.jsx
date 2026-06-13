@@ -12,10 +12,11 @@ export default function WorkCentersList() {
 
   const columns = [
     { key: 'name', label: 'WORK CENTER' },
-    { key: 'capacityPerHour', label: 'CAPACITY/HR', render: (r) => <span className="font-mono">{r.capacityPerHour}</span> },
-    { key: 'costPerHour', label: 'COST/HR', render: (r) => <span className="font-mono">₹ {r.costPerHour}</span> },
-    { key: 'utilization', label: 'UTILIZATION', render: () => {
-        const util = Math.floor(Math.random() * 100); // Mock util since it's not purely backed right now
+    { key: 'capacityPerHour', label: 'CAPACITY/HR', render: (r) => <span className="font-mono">{r.capacity_per_hour || r.capacityPerHour}</span> },
+    { key: 'costPerHour', label: 'COST/HR', render: (r) => <span className="font-mono">₹ {r.hourly_cost || r.costPerHour}</span> },
+    { key: 'utilization', label: 'UTILIZATION', render: (r) => {
+        // Stable mock utilization based on ID
+        const util = (r.id * 17) % 100;
         const isHigh = util > 80;
         return (
           <div className="flex items-center gap-2 w-32">
