@@ -5,10 +5,10 @@ const { query } = require('../../config/db');
 const fs = require('fs');
 const path = require('path');
 
-let GoogleGenerativeAI;
+let Groq;
 try {
-  ({ GoogleGenerativeAI } = require('@google/generative-ai'));
-} catch { GoogleGenerativeAI = null; }
+  Groq = require('groq-sdk');
+} catch { Groq = null; }
 
 const router = Router();
 router.use(requireAuth);
@@ -67,25 +67,34 @@ router.post('/',
       const { message, history } = req.body;
       const ctx = await buildContext();
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      const useGemini = GoogleGenerativeAI && apiKey && apiKey !== '' && apiKey !== 'paste_here';
+      const apiKey = process.env.GROQ_API_KEY;
+      const useGroq = Groq && apiKey && apiKey !== '' && apiKey !== 'paste_here';
 
-      if (useGemini) {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      if (useGroq) {
+        const groq = new Groq({ apiKey });
         const systemPrompt = `You are the assistant for B-cart for Shiv Furniture Works. Answer using ONLY the LIVE_CONTEXT below. If asked a question that needs data not in context, say so. Be concise, use ₹ for prices, never invent SKUs or numbers.
 
 LIVE_CONTEXT: ${JSON.stringify(ctx)}`;
 
-        const chat = model.startChat({
-          history: history || [],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 800 },
+        const messages = [
+          { role: 'system', content: systemPrompt },
+          ...(history || []).map(m => ({ 
+            role: m.role === 'model' || m.role === 'assistant' ? 'assistant' : 'user', 
+            content: m.parts ? m.parts[0].text : m.content || '' 
+          })),
+          { role: 'user', content: message }
+        ];
+
+        const chatCompletion = await groq.chat.completions.create({
+          messages: messages,
+          model: 'llama3-8b-8192',
+          temperature: 0.3,
+          max_tokens: 800,
         });
 
-        const result = await chat.sendMessage(systemPrompt + '\n\nUser: ' + message);
         return res.json({
-          response: result.response.text(),
-          source: 'gemini',
+          response: chatCompletion.choices[0]?.message?.content || '',
+          source: 'groq',
           context_size: JSON.stringify(ctx).length,
         });
       }
@@ -115,7 +124,7 @@ LIVE_CONTEXT: ${JSON.stringify(ctx)}`;
         const moStr = ctx.openMO.map(m => `${m.status}: ${m.cnt}`).join(', ');
         reply = `Manufacturing orders by status — ${moStr}.`;
       } else {
-        reply = `I'm running in offline mode (no Gemini key configured). Snapshot CSV available at /api/chat/snapshot.csv. Try asking about low stock, vendors, alerts, orders, or inventory.`;
+        reply = `I'm running in offline mode (no Groq API key configured). Snapshot CSV available at /api/chat/snapshot.csv. Try asking about low stock, vendors, alerts, orders, or inventory.`;
       }
 
       return res.json({ response: reply, source: 'csv_fallback' });
