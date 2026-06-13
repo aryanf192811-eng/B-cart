@@ -16,7 +16,12 @@ export default function AuditLogs() {
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ['audit', filters],
-    queryFn: async () => (await api.get(`/audit?module=${filters.module}&action=${filters.action}`)).data
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.module !== 'All') params.append('entity_type', filters.module);
+      if (filters.action !== 'All') params.append('action', filters.action);
+      return (await api.get(`/audit?${params.toString()}`)).data;
+    }
   });
 
   const columns = [

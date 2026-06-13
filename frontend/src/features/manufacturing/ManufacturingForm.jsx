@@ -65,7 +65,7 @@ export default function ManufacturingForm({ mode }) {
 
   const { data: boms } = useQuery({
     queryKey: ['boms', finishedProductId],
-    queryFn: async () => (await api.get(`${E.bom()}?product_id=${finishedProductId}`)).data,
+    queryFn: async () => (await api.get(`${E.bom()}?product_id=${finishedProductId}`)).data.rows || [],
     enabled: !!finishedProductId
   });
 
@@ -130,10 +130,11 @@ export default function ManufacturingForm({ mode }) {
   });
 
   const actionMutation = useMutation({
-    mutationFn: async ({ action }) => {
-      if (action === 'confirm') return (await api.post(E.moConfirm(id))).data;
-      if (action === 'produce') return (await api.post(E.moProduce(id))).data;
-      if (action === 'cancel') return (await api.post(E.moCancel(id))).data;
+    mutationFn: async ({ action, overrideId }) => {
+      const targetId = overrideId || id;
+      if (action === 'confirm') return (await api.post(E.moConfirm(targetId))).data;
+      if (action === 'produce') return (await api.post(E.moProduce(targetId))).data;
+      if (action === 'cancel') return (await api.post(E.moCancel(targetId))).data;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['manufacturing']);
@@ -169,8 +170,18 @@ export default function ManufacturingForm({ mode }) {
   const onSubmit = (data) => saveMutation.mutate(data);
 
   const handleConfirm = async () => {
-    if (form.formState.isDirty) await form.handleSubmit(onSubmit)();
-    actionMutation.mutate({ action: 'confirm' });
+    if (form.formState.isDirty || isNew) {
+      form.handleSubmit((data) => {
+        saveMutation.mutate(data, {
+          onSuccess: (res) => {
+            const newId = res.manufacturing_order?.id || res.id || id;
+            actionMutation.mutate({ action: 'confirm', overrideId: newId });
+          }
+        });
+      })();
+    } else {
+      actionMutation.mutate({ action: 'confirm' });
+    }
   };
 
   const status = mo?.status?.toLowerCase() || 'draft';

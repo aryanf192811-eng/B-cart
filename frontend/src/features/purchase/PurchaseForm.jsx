@@ -116,10 +116,11 @@ export default function PurchaseForm({ mode }) {
   });
 
   const actionMutation = useMutation({
-    mutationFn: async ({ action, payload }) => {
-      if (action === 'confirm') return (await api.post(E.purchaseConfirm(id))).data;
-      if (action === 'receive') return (await api.post(E.purchaseReceive(id), payload)).data;
-      if (action === 'cancel') return (await api.post(E.purchaseCancel(id))).data;
+    mutationFn: async ({ action, payload, overrideId }) => {
+      const targetId = overrideId || id;
+      if (action === 'confirm') return (await api.post(E.purchaseConfirm(targetId))).data;
+      if (action === 'receive') return (await api.post(E.purchaseReceive(targetId), payload)).data;
+      if (action === 'cancel') return (await api.post(E.purchaseCancel(targetId))).data;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['purchase']);
@@ -163,8 +164,18 @@ export default function PurchaseForm({ mode }) {
   const onSubmit = (data) => saveMutation.mutate(data);
 
   const handleConfirm = async () => {
-    if (form.formState.isDirty) await form.handleSubmit(onSubmit)();
-    actionMutation.mutate({ action: 'confirm' });
+    if (form.formState.isDirty || isNew) {
+      form.handleSubmit((data) => {
+        saveMutation.mutate(data, {
+          onSuccess: (res) => {
+            const newId = res.purchase_order?.id || res.id || id;
+            actionMutation.mutate({ action: 'confirm', overrideId: newId });
+          }
+        });
+      })();
+    } else {
+      actionMutation.mutate({ action: 'confirm' });
+    }
   };
 
   const status = po?.status?.toLowerCase() || 'draft';

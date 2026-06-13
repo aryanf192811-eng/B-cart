@@ -110,10 +110,11 @@ export default function SalesForm({ mode }) {
   });
 
   const actionMutation = useMutation({
-    mutationFn: async ({ action, payload }) => {
-      if (action === 'confirm') return (await api.post(E.salesConfirm(id))).data;
-      if (action === 'deliver') return (await api.post(E.salesDeliver(id), payload)).data;
-      if (action === 'cancel') return (await api.post(E.salesCancel(id))).data;
+    mutationFn: async ({ action, payload, overrideId }) => {
+      const targetId = overrideId || id;
+      if (action === 'confirm') return (await api.post(E.salesConfirm(targetId))).data;
+      if (action === 'deliver') return (await api.post(E.salesDeliver(targetId), payload)).data;
+      if (action === 'cancel') return (await api.post(E.salesCancel(targetId))).data;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['sales']);
@@ -131,8 +132,18 @@ export default function SalesForm({ mode }) {
   const onSubmit = (data) => saveMutation.mutate(data);
 
   const handleConfirm = async () => {
-    if (form.formState.isDirty) await form.handleSubmit(onSubmit)();
-    actionMutation.mutate({ action: 'confirm' });
+    if (form.formState.isDirty || isNew) {
+      form.handleSubmit((data) => {
+        saveMutation.mutate(data, {
+          onSuccess: (res) => {
+            const newId = res.sales_order?.id || res.id || id;
+            actionMutation.mutate({ action: 'confirm', overrideId: newId });
+          }
+        });
+      })();
+    } else {
+      actionMutation.mutate({ action: 'confirm' });
+    }
   };
 
   const status = so?.status?.toLowerCase() || 'draft';
