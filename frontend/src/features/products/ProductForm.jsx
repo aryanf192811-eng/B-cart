@@ -104,7 +104,7 @@ export default function ProductForm({ mode }) {
       })).data;
     },
     onSuccess: (data) => {
-      setImagePreview(data.image_url);
+      setImagePreview(assetUrl(data.image_url));
       queryClient.invalidateQueries({ queryKey: ['products', id] });
       toast.success('Image uploaded');
     },

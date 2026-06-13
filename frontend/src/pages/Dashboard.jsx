@@ -118,7 +118,7 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto">
       {/* ROW 1: Control Tower Hero Banner */}
-      <div className="relative rounded-xl overflow-hidden bg-ink text-white shadow-lg border border-rule min-h-[220px] flex">
+      <div className="relative rounded-3xl overflow-hidden bg-ink text-white shadow-xl min-h-[220px] flex">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200&auto=format&fit=crop')" }}
