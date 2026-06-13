@@ -102,7 +102,7 @@ GROUP BY v.id, v.name
 ORDER BY reliability_score DESC NULLS LAST;
 
 CREATE OR REPLACE VIEW work_center_load_view AS
-SELECT wc.id, wc.code, wc.name, wc.capacity_per_hour,
+SELECT wc.id, wc.code, wc.name, wc.capacity_per_hour, wc.hourly_cost,
   COUNT(CASE WHEN wo.status = 'pending' THEN 1 END) AS pending_orders,
   COUNT(CASE WHEN wo.status IN ('in_progress','paused') THEN 1 END) AS active_orders,
   COALESCE(SUM(CASE WHEN wo.status IN ('pending','in_progress','paused') THEN wo.duration_mins ELSE 0 END), 0) AS queued_minutes,
@@ -115,4 +115,4 @@ SELECT wc.id, wc.code, wc.name, wc.capacity_per_hour,
 FROM work_centers wc
 LEFT JOIN work_orders wo ON wo.work_center_id = wc.id
 WHERE wc.is_active = true
-GROUP BY wc.id, wc.code, wc.name, wc.capacity_per_hour;
+GROUP BY wc.id, wc.code, wc.name, wc.capacity_per_hour, wc.hourly_cost;

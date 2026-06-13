@@ -21,7 +21,7 @@ export default function WorkCentersList() {
         return (
           <div className="flex items-center gap-2 w-32">
             <div className="h-1.5 flex-1 bg-paper2 rounded-full overflow-hidden">
-              <div className={`h-full ${isHigh ? 'bg-rust' : 'bg-steel2'}`} style={{ width: `${util}%` }}></div>
+              <div className={`h-full ${isHigh ? 'bg-danger' : 'bg-warn'}`} style={{ width: `${util}%` }}></div>
             </div>
             <span className="font-mono text-[11px] text-steel">{util}%</span>
           </div>
