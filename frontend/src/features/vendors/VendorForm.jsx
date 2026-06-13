@@ -32,13 +32,13 @@ export default function VendorForm({ mode }) {
   const performance = performanceData?.reliability;
 
   const form = useForm({
-    defaultValues: { name: '', email: '', phone: '', address: '', tags: [] }
+    defaultValues: { name: '', email: '', phone: '', address: '', gst_number: '', tags: [] }
   });
 
   useEffect(() => {
     if (!isNew && vendor) {
       form.reset({
-        name: vendor.name || '', email: vendor.email || '', phone: vendor.phone || '', address: vendor.address || '', tags: vendor.tags || []
+        name: vendor.name || '', email: vendor.email || '', phone: vendor.phone || '', address: vendor.address || '', gst_number: vendor.gst_number || '', tags: vendor.tags || []
       });
     }
   }, [vendor, isNew, form]);
@@ -76,6 +76,7 @@ export default function VendorForm({ mode }) {
               <fieldset disabled={!isEditing}>
                 <FieldGrid>
                   <FieldRow label="Name"><input {...form.register('name')} className="field" /></FieldRow>
+                  <FieldRow label="GST Number"><input {...form.register('gst_number')} className="field" /></FieldRow>
                   <FieldRow label="Email"><input {...form.register('email')} type="email" className="field" /></FieldRow>
                   <FieldRow label="Phone"><input {...form.register('phone')} className="field" /></FieldRow>
                   <FieldRow label="Address"><input {...form.register('address')} className="field" /></FieldRow>
