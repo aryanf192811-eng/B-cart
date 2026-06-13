@@ -5,6 +5,7 @@ import { api } from '../../api/client';
 import { E } from '../../api/endpoints';
 import DataTable from '../../components/DataTable';
 import { Package } from 'lucide-react';
+import { assetUrl } from '../../utils/assetUrl';
 
 export default function ProductsList() {
   const navigate = useNavigate();
@@ -24,8 +25,8 @@ export default function ProductsList() {
       label: 'PRODUCT',
       render: (r) => (
         <div className="flex items-center gap-3">
-          {r.imageUrl ? (
-            <img src={r.imageUrl} alt={r.name} className="w-8 h-8 rounded-md object-cover border-[0.5px] border-rule" />
+          {(r.image_url || r.imageUrl) ? (
+            <img src={assetUrl(r.image_url || r.imageUrl)} alt={r.name} className="w-8 h-8 rounded-md object-cover border-[0.5px] border-rule" />
           ) : (
             <div className="w-8 h-8 rounded-md bg-paper2 border-[0.5px] border-rule flex items-center justify-center text-[10px] text-steel font-medium">No Img</div>
           )}
@@ -127,8 +128,8 @@ export default function ProductsList() {
                     onClick={() => navigate(`/products/${r._id || r.id}`)}
                   >
                     <div className="product-card__image">
-                      {r.imageUrl ? (
-                        <img src={r.imageUrl} alt={r.name} />
+                      {(r.image_url || r.imageUrl) ? (
+                        <img src={assetUrl(r.image_url || r.imageUrl)} alt={r.name} />
                       ) : (
                         <div className="product-card__image product-card__image--empty" style={{ display: 'flex' }}>
                           <Package size={36} style={{ opacity: 0.25 }} />

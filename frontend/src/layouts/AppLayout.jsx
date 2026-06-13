@@ -131,8 +131,10 @@ export default function AppLayout() {
         position: 'fixed',
         inset: '0 auto 0 0',
         width: '220px',
-        background: 'var(--surface-container-low)',
-        borderRight: '1px solid var(--outline-variant)',
+        background: 'rgba(251, 249, 249, 0.75)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRight: '1px solid rgba(220, 215, 215, 0.5)',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 20,
@@ -425,44 +427,46 @@ export default function AppLayout() {
         <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
 
         {/* FAB button */}
-        <button
-          onClick={() => setIsChatOpen(prev => !prev)}
-          aria-label={isChatOpen ? 'Close AI assistant' : 'Open AI assistant'}
-          title="B-cart AI Assistant"
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            width: '54px',
-            height: '54px',
-            borderRadius: '9999px',
-            background: 'var(--primary)',
-            color: 'var(--on-primary)',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.25), 0 8px 32px rgba(0,0,0,0.15)',
-            zIndex: 1000,
-            transition: 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 250ms ease',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = 'scale(1.08) translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.30), 0 12px 40px rgba(0,0,0,0.20)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25), 0 8px 32px rgba(0,0,0,0.15)';
-          }}
-          onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.95)'; }}
-          onMouseUp={e => { e.currentTarget.style.transform = 'scale(1.08) translateY(-2px)'; }}
-        >
-          {isChatOpen
-            ? <X size={22} />
-            : <MessageSquare size={22} />
-          }
-        </button>
+        {!isChatOpen && (
+          <button
+            onClick={() => setIsChatOpen(prev => !prev)}
+            aria-label={isChatOpen ? 'Close AI assistant' : 'Open AI assistant'}
+            title="B-cart AI Assistant"
+            style={{
+              position: 'fixed',
+              bottom: '24px',
+              right: '24px',
+              width: '54px',
+              height: '54px',
+              borderRadius: '9999px',
+              background: 'var(--primary)',
+              color: 'var(--on-primary)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.25), 0 8px 32px rgba(0,0,0,0.15)',
+              zIndex: 1000,
+              transition: 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 250ms ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'scale(1.08) translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.30), 0 12px 40px rgba(0,0,0,0.20)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25), 0 8px 32px rgba(0,0,0,0.15)';
+            }}
+            onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.95)'; }}
+            onMouseUp={e => { e.currentTarget.style.transform = 'scale(1.08) translateY(-2px)'; }}
+          >
+            {isChatOpen
+              ? <X size={22} />
+              : <MessageSquare size={22} />
+            }
+          </button>
+        )}
       </>
 
       <CommandPalette isOpen={isCmdOpen} onClose={() => setIsCmdOpen(false)} />

@@ -68,13 +68,14 @@ INSERT INTO product_categories (name, description) VALUES
 -- ============================================================
 -- Products (6)
 -- ============================================================
-INSERT INTO products (sku, name, category_id, unit, sales_price, cost_price, on_hand_qty, min_stock_qty, lead_time_days, procure_on_demand, procurement_type, default_vendor_id) VALUES
-  ('DT-001', 'Dining Table', 1, 'Units', 8500.00, 5500.00, 5.000, 3.000, 7, true, 'manufacturing', NULL),
-  ('OC-001', 'Office Chair', 1, 'Units', 4200.00, 2800.00, 12.000, 5.000, 7, true, 'manufacturing', NULL),
-  ('WL-001', 'Wooden Legs', 2, 'Units', 250.00, 150.00, 80.000, 50.000, 5, true, 'purchase', 1),
-  ('WT-001', 'Wooden Top', 2, 'Units', 1200.00, 800.00, 15.000, 10.000, 5, true, 'purchase', 1),
-  ('SC-001', 'Screws (pack of 12)', 2, 'Packs', 50.00, 30.00, 200.000, 100.000, 3, false, NULL, 4),
-  ('FB-001', 'Fabric (m)', 3, 'Meters', 180.00, 110.00, 35.000, 20.000, 5, true, 'purchase', 2);
+INSERT INTO products (sku, name, category_id, unit, sales_price, cost_price, on_hand_qty, min_stock_qty, lead_time_days, procure_on_demand, procurement_type, default_vendor_id, image_url) VALUES
+('DT-001', 'Dining Table', 1, 'Units', 8500.00, 5500.00, 1.000, 3.000, 15, true, 'manufacturing', null, 'https://images.unsplash.com/photo-1577140917170-285929fb55b7?q=80&w=256&auto=format&fit=crop'),
+('OC-001', 'Office Chair', 1, 'Units', 4200.00, 2800.00, 10.000, 5.000, 7, false, 'purchase', 2, 'https://images.unsplash.com/photo-1592078615290-033ee584e267?q=80&w=256&auto=format&fit=crop'),
+('WL-001', 'Wooden Legs', 2, 'Units', 250.00, 150.00, 80.000, 40.000, 5, false, 'purchase', 1, 'https://images.unsplash.com/photo-1506484381205-f7945653044d?q=80&w=256&auto=format&fit=crop'),
+('WT-001', 'Wooden Top', 2, 'Units', 1200.00, 800.00, 15.000, 10.000, 5, false, 'purchase', 1, 'https://images.unsplash.com/photo-1541123356219-284ebe98ae3b?q=80&w=256&auto=format&fit=crop'),
+('SC-001', 'Screws (pack of 12)', 2, 'Packs', 50.00, 30.00, 200.000, 100.000, 2, false, 'purchase', 1, 'https://images.unsplash.com/photo-1616801962383-dbcb79bb8f7f?q=80&w=256&auto=format&fit=crop'),
+('FB-001', 'Fabric (m)', 3, 'Meters', 120.00, 80.00, 50.000, 20.000, 10, false, 'purchase', 2, 'https://images.unsplash.com/photo-1522758971460-1d21eed7dc1d?q=80&w=256&auto=format&fit=crop')
+ON CONFLICT (sku) DO NOTHING;
 
 -- ============================================================
 -- BoMs (2)
