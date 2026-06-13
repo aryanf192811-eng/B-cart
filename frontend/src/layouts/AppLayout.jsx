@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Chatbot from '../components/Chatbot';
 import CommandPalette from '../components/CommandPalette';
 import ErrorBoundary from '../components/ErrorBoundary';
+import Avatar from '../components/Avatar';
 import { 
   Home, ShoppingCart, Truck, Factory, Package, 
   FileText, Building2, UserCircle, Cog, LineChart, 
@@ -217,23 +218,12 @@ export default function AppLayout() {
           gap: '10px',
           flexShrink: 0,
         }}>
-          <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '9999px',
-            background: 'var(--primary-container)',
-            color: 'var(--inverse-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'var(--font-sans)',
-            fontSize: '10px',
-            fontWeight: 700,
-            flexShrink: 0,
-            letterSpacing: '0.05em',
-          }}>
-            {initials}
-          </div>
+          <Avatar 
+            name={user?.name || 'Admin'} 
+            avatarUrl={user?.avatar_url} 
+            size="28px" 
+            className="rounded-full !bg-primary-container !text-inverse-primary" 
+          />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
               fontFamily: 'var(--font-sans)',
@@ -370,16 +360,12 @@ export default function AppLayout() {
 
             {/* User avatar + dropdown */}
             <div className="relative group cursor-pointer">
-              <div style={{
-                width: '32px', height: '32px', borderRadius: '9999px',
-                background: 'var(--primary-container)', color: 'var(--inverse-primary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700,
-                userSelect: 'none', letterSpacing: '0.05em',
-                transition: 'opacity 150ms',
-              }}>
-                {initials}
-              </div>
+              <Avatar 
+                name={user?.name || 'Admin'} 
+                avatarUrl={user?.avatar_url} 
+                size="36px" 
+                className="rounded-full !bg-primary-container !text-inverse-primary !w-[32px] !h-[32px] !text-[11px] group-hover:opacity-80 transition-opacity" 
+              />
               {/* Dropdown */}
               <div style={{
                 position: 'absolute', right: 0, top: 'calc(100% + 6px)',

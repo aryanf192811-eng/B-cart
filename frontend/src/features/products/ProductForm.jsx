@@ -105,7 +105,7 @@ export default function ProductForm({ mode }) {
     },
     onSuccess: (data) => {
       setImagePreview(assetUrl(data.image_url));
-      queryClient.invalidateQueries({ queryKey: ['products', id] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Image uploaded');
     },
     onError: () => toast.error('Image upload failed')

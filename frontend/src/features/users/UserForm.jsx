@@ -83,6 +83,7 @@ export default function UserForm({ mode }) {
     onSuccess: (data) => {
       setAvatarPreview(assetUrl(data.avatar_url));
       refreshUser();
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('Avatar updated');
     },
     onError: (err) => toast.error(err?.response?.data?.error || 'Avatar upload failed')

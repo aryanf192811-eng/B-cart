@@ -1,7 +1,8 @@
 import React from 'react';
 import clsx from 'clsx';
+import { assetUrl } from '../utils/assetUrl';
 
-export default function Avatar({ name, size = '28px', className }) {
+export default function Avatar({ name, avatarUrl, size = '28px', className }) {
   const initials = name 
     ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) 
     : '??';
@@ -11,13 +12,17 @@ export default function Avatar({ name, size = '28px', className }) {
   return (
     <div 
       className={clsx(
-        "bg-ink text-white rounded-sm flex items-center justify-center font-medium tracking-wider select-none shrink-0",
+        "bg-ink text-white rounded-sm flex items-center justify-center font-medium tracking-wider select-none shrink-0 overflow-hidden",
         isSmall ? "w-[28px] h-[28px] text-[11px]" : "w-[36px] h-[36px] text-[14px]",
         className
       )}
       title={name}
     >
-      {initials}
+      {avatarUrl ? (
+        <img src={assetUrl(avatarUrl)} alt={name} className="w-full h-full object-cover" />
+      ) : (
+        initials
+      )}
     </div>
   );
 }
