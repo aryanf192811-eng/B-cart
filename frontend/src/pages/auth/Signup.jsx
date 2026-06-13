@@ -75,7 +75,7 @@ export default function Signup() {
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-rust/90 via-ink/50 to-ink/20"></div>
 
         <div className="relative z-20">
-          <h1 className="font-mono text-4xl text-white tracking-widest font-bold drop-shadow-lg">B-Card</h1>
+          <h1 className="font-mono text-4xl text-white tracking-widest font-bold drop-shadow-lg">B-cart</h1>
           <p className="text-white/90 text-[15px] mt-2 font-medium drop-shadow-md">Mini ERP · Operations Floor</p>
         </div>
         <div className="relative z-20 border-l-4 border-rust pl-5 text-white text-[15px] leading-relaxed font-medium max-w-sm drop-shadow-md">
@@ -89,7 +89,7 @@ export default function Signup() {
           <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rust to-info mb-2 drop-shadow-sm" style={{ fontFamily: 'Roboto, sans-serif' }}>
             Register Access
           </h1>
-          <p className="text-[15px] text-steel font-medium mb-8">Join the B-Card operations floor</p>
+          <p className="text-[15px] text-steel font-medium mb-8">Join the B-cart operations floor</p>
           
           <form onSubmit={handleSubmit(onSubmit)} className={`space-y-4 ${error ? 'border-l-[0.5px] border-danger pl-4 -ml-[16.5px]' : ''}`}>
             {error && <div className="text-danger text-sm mb-4">{error}</div>}
