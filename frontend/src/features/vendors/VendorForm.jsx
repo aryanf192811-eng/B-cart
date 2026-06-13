@@ -14,14 +14,15 @@ export default function VendorForm({ mode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isNew = mode === 'new';
-  
+  const [isEditing, setIsEditing] = useState(isNew);
   const [activeTab, setActiveTab] = useState('general');
 
-  const { data: vendor, isLoading } = useQuery({
+  const { data: vendorData, isLoading } = useQuery({
     queryKey: ['vendors', id],
     queryFn: async () => (await api.get(E.vendor(id))).data,
     enabled: !isNew
   });
+  const vendor = vendorData?.vendor;
 
   const { data: performance } = useQuery({
     queryKey: ['vendors', id, 'performance'],
@@ -50,6 +51,7 @@ export default function VendorForm({ mode }) {
       queryClient.invalidateQueries(['vendors']);
       toast.success('Vendor saved');
       if (isNew) navigate(`/vendors/${data._id || data.id}`, { replace: true });
+      else setIsEditing(false);
     },
     onError: () => toast.error('Failed to save')
   });
@@ -59,7 +61,7 @@ export default function VendorForm({ mode }) {
   return (
     <div className="h-full">
       <FormShell>
-        <FormShell.Header title={isNew ? 'New Vendor' : vendor?.name} subtitle="Vendor Profile" />
+        <FormShell.Header title={isNew ? 'New Vendor' : (isEditing ? 'Edit Vendor' : vendor?.name)} subtitle="Vendor Profile" />
         
         <FormShell.Tabs 
           tabs={[{ id: 'general', label: 'General' }, ...(!isNew ? [{ id: 'performance', label: 'Performance' }] : [])]}
@@ -70,12 +72,14 @@ export default function VendorForm({ mode }) {
         <FormShell.Body>
           {activeTab === 'general' && (
             <div className="card p-6">
-              <FieldGrid>
-                <FieldRow label="Name"><input {...form.register('name')} className="field" /></FieldRow>
-                <FieldRow label="Email"><input {...form.register('email')} type="email" className="field" /></FieldRow>
-                <FieldRow label="Phone"><input {...form.register('phone')} className="field" /></FieldRow>
-                <FieldRow label="Address"><input {...form.register('address')} className="field" /></FieldRow>
-              </FieldGrid>
+              <fieldset disabled={!isEditing}>
+                <FieldGrid>
+                  <FieldRow label="Name"><input {...form.register('name')} className="field" /></FieldRow>
+                  <FieldRow label="Email"><input {...form.register('email')} type="email" className="field" /></FieldRow>
+                  <FieldRow label="Phone"><input {...form.register('phone')} className="field" /></FieldRow>
+                  <FieldRow label="Address"><input {...form.register('address')} className="field" /></FieldRow>
+                </FieldGrid>
+              </fieldset>
             </div>
           )}
 
@@ -92,9 +96,15 @@ export default function VendorForm({ mode }) {
         </FormShell.Body>
 
         <FormShell.Side>
-          <button className="btn btn-rust justify-center" onClick={form.handleSubmit((d) => saveMutation.mutate(d))} disabled={saveMutation.isPending}>
-            {saveMutation.isPending ? 'Saving...' : 'Save Vendor'}
-          </button>
+          {!isEditing ? (
+            <button className="btn justify-center" onClick={() => setIsEditing(true)}>
+              Edit Vendor
+            </button>
+          ) : (
+            <button className="btn btn-rust justify-center" onClick={form.handleSubmit((d) => saveMutation.mutate(d))} disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? 'Saving...' : 'Save Vendor'}
+            </button>
+          )}
         </FormShell.Side>
       </FormShell>
     </div>

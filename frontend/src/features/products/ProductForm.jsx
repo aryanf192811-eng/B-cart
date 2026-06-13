@@ -17,6 +17,7 @@ export default function ProductForm({ mode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isNew = mode === 'new';
+  const [isEditing, setIsEditing] = useState(isNew);
   const imageInputRef = useRef(null);
   const [imagePreview, setImagePreview] = useState(null);
 
@@ -61,25 +62,15 @@ export default function ProductForm({ mode }) {
         cost_price: parseFloat(prod.cost_price) || 0,
         on_hand_qty: parseFloat(prod.on_hand_qty) || 0,
         min_stock_qty: parseFloat(prod.min_stock_qty) || 0,
-        lead_time_days: prod.lead_time_days || 7,
+        lead_time_days: parseInt(prod.lead_time_days) || 7,
         procure_on_demand: prod.procure_on_demand || false,
-        procurement_type: prod.procurement_type || 'purchase',
-        default_vendor_id: prod.default_vendor_id || null,
+        procurement_type: prod.procurement_type || 'purchase'
       });
-      if (prod.image_url) setImagePreview(assetUrl(prod.image_url));
+      if (prod.image_url) {
+        setImagePreview(assetUrl(prod.image_url));
+      }
     }
   }, [prod, isNew, form]);
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        form.setValue('imageUrl', reader.result, { shouldDirty: true });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
@@ -87,40 +78,40 @@ export default function ProductForm({ mode }) {
       return (await api.put(E.product(id), data)).data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries(['products']);
       toast.success('Product saved');
-      const savedId = data?.product?.id || id;
-      if (isNew) navigate(`/products/${savedId}`, { replace: true });
+      if (isNew) navigate(`/products/${data._id || data.id}`, { replace: true });
+      else setIsEditing(false);
     },
-    onError: (err) => toast.error(err?.response?.data?.error || 'Failed to save product')
+    onError: () => toast.error('Failed to save product')
   });
 
   const imageMutation = useMutation({
     mutationFn: async (file) => {
-      const form = new FormData();
-      form.append('image', file);
-      return (await api.post(E.productImage(id), form, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })).data;
+      const fd = new FormData();
+      fd.append('image', file);
+      return (await api.post(`/products/${id}/image`, fd)).data;
     },
     onSuccess: (data) => {
-      setImagePreview(assetUrl(data.image_url));
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries(['products']);
       toast.success('Image uploaded');
+      setImagePreview(assetUrl(data.product.image_url));
     },
-    onError: () => toast.error('Image upload failed')
+    onError: () => toast.error('Failed to upload image')
   });
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (isNew) {
-      toast.error('Save product first, then upload an image.');
+      toast.error('Save product first before uploading image');
       return;
     }
-    const localUrl = URL.createObjectURL(file);
-    setImagePreview(localUrl);
     imageMutation.mutate(file);
+  };
+
+  const onSubmit = (data) => {
+    saveMutation.mutate(data);
   };
 
   if (!isNew && isLoading) return <div className="p-8 text-steel">Loading...</div>;
@@ -132,11 +123,7 @@ export default function ProductForm({ mode }) {
   return (
     <div className="h-full">
       <FormShell>
-        <FormShell.Header
-          title={isNew ? 'New Product' : prod?.name}
-          subtitle={prod?.category}
-          reference={prod?.sku}
-        />
+        <FormShell.Header title={isNew ? 'New Product' : (isEditing ? 'Edit Product' : prod?.name)} subtitle="Master Data" />
         
         <FormShell.Tabs tabs={[{ id: 'general', label: 'General Information' }]} active="general" onChange={() => {}} />
 
@@ -146,130 +133,146 @@ export default function ProductForm({ mode }) {
             {!isNew && (
               <div className="mb-6 flex items-start gap-5">
                 <div
-                  className="w-24 h-24 rounded-lg border-[0.5px] border-rule bg-paper2 flex items-center justify-center overflow-hidden cursor-pointer group relative"
-                  onClick={() => imageInputRef.current?.click()}
+                  className={`w-24 h-24 rounded-lg border-[0.5px] border-rule bg-paper2 flex items-center justify-center overflow-hidden relative ${isEditing ? 'cursor-pointer group' : ''}`}
+                  onClick={() => isEditing && imageInputRef.current?.click()}
                 >
                   {imagePreview
                     ? <img src={imagePreview} alt={prod?.name} className="w-full h-full object-cover" />
                     : <Camera size={28} className="text-steel group-hover:text-rust transition-colors" />
                   }
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Upload size={18} className="text-white" />
-                  </div>
+                  {isEditing && (
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Upload size={18} className="text-white" />
+                    </div>
+                  )}
                 </div>
                 <div className="pt-1">
                   <div className="text-[12px] font-semibold text-ink mb-1">Product Image</div>
-                  <div className="text-[11px] text-steel mb-2">Click to upload. JPEG, PNG, WebP up to 5 MB.</div>
-                  <button
-                    type="button"
-                    className="text-[12px] text-rust hover:underline font-medium"
-                    onClick={() => imageInputRef.current?.click()}
-                  >
-                    {imageMutation.isPending ? 'Uploading...' : imagePreview ? 'Change Image' : 'Upload Image'}
-                  </button>
-                  <input
-                    ref={imageInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
+                  <div className="text-[11px] text-steel mb-2">JPEG, PNG, WebP up to 5 MB.</div>
+                  {isEditing && (
+                    <>
+                      <button
+                        type="button"
+                        className="text-[12px] text-rust hover:underline font-medium"
+                        onClick={() => imageInputRef.current?.click()}
+                      >
+                        {imageMutation.isPending ? 'Uploading...' : imagePreview ? 'Change Image' : 'Upload Image'}
+                      </button>
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handleImageChange}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
             )}
 
-            <FieldGrid>
-              <FieldRow label="SKU">
-                <input {...form.register('sku')} className="field font-mono" disabled={!isNew} />
-              </FieldRow>
-              <FieldRow label="Name">
-                <input {...form.register('name')} className="field" />
-              </FieldRow>
-              <FieldRow label="Category">
-                <select {...form.register('category_id', { valueAsNumber: true })} className="field">
-                  <option value="">-- Select Category --</option>
-                  {Array.isArray(categories) && categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </FieldRow>
-              <FieldRow label="Unit of Measure">
-                <select {...form.register('unit')} className="field">
-                  <option value="Units">Units</option>
-                  <option value="kg">kg</option>
-                  <option value="Meters">Meters</option>
-                  <option value="Packs">Packs</option>
-                  <option value="Liters">Liters</option>
-                </select>
-              </FieldRow>
-              <FieldRow label="Sales Price (₹)">
-                <input type="number" step="0.01" min="0" {...form.register('sales_price', { valueAsNumber: true })} className="field font-mono" />
-              </FieldRow>
-              <FieldRow label="Cost Price (₹)">
-                <input type="number" step="0.01" min="0" {...form.register('cost_price', { valueAsNumber: true })} className="field font-mono" />
-              </FieldRow>
-              <FieldRow label="On Hand Qty" hint="Editing this writes a stock adjustment">
-                <input type="number" step="0.001" min="0" {...form.register('on_hand_qty', { valueAsNumber: true })} className="field font-mono" />
-              </FieldRow>
-              <FieldRow label="Min Stock Qty">
-                <input type="number" step="0.001" min="0" {...form.register('min_stock_qty', { valueAsNumber: true })} className="field font-mono" />
-              </FieldRow>
-              <FieldRow label="Lead Time (days)">
-                <input type="number" step="1" min="0" {...form.register('lead_time_days', { valueAsNumber: true })} className="field font-mono" />
-              </FieldRow>
-            </FieldGrid>
+            <fieldset disabled={!isEditing}>
+              <FieldGrid>
+                <FieldRow label="SKU">
+                  <input {...form.register('sku')} className="field font-mono" disabled={!isNew} />
+                </FieldRow>
+                <FieldRow label="Name">
+                  <input {...form.register('name')} className="field" />
+                </FieldRow>
+                <FieldRow label="Category">
+                  <select {...form.register('category_id', { valueAsNumber: true })} className="field">
+                    <option value="">-- Select Category --</option>
+                    {Array.isArray(categories) && categories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </FieldRow>
+                <FieldRow label="Unit of Measure">
+                  <select {...form.register('unit')} className="field">
+                    <option value="Units">Units</option>
+                    <option value="kg">kg</option>
+                    <option value="Meters">Meters</option>
+                    <option value="Packs">Packs</option>
+                    <option value="Liters">Liters</option>
+                  </select>
+                </FieldRow>
+                <FieldRow label="Sales Price (₹)">
+                  <input type="number" step="0.01" min="0" {...form.register('sales_price', { valueAsNumber: true })} className="field font-mono" />
+                </FieldRow>
+                <FieldRow label="Cost Price (₹)">
+                  <input type="number" step="0.01" min="0" {...form.register('cost_price', { valueAsNumber: true })} className="field font-mono" />
+                </FieldRow>
+                <FieldRow label="On Hand Qty" hint={isEditing ? "Editing this writes a stock adjustment" : undefined}>
+                  <input type="number" step="0.001" min="0" {...form.register('on_hand_qty', { valueAsNumber: true })} className="field font-mono" />
+                </FieldRow>
+                <FieldRow label="Min Stock Qty">
+                  <input type="number" step="0.001" min="0" {...form.register('min_stock_qty', { valueAsNumber: true })} className="field font-mono" />
+                </FieldRow>
+                <FieldRow label="Lead Time (days)">
+                  <input type="number" step="1" min="0" {...form.register('lead_time_days', { valueAsNumber: true })} className="field font-mono" />
+                </FieldRow>
+              </FieldGrid>
 
-            <div className="mt-8 border-t-[0.5px] border-rule pt-6">
-              <h3 className="text-sm font-semibold text-ink mb-4">Procurement</h3>
-              <div className="flex items-center gap-2 mb-4">
-                <input type="checkbox" id="pod" {...form.register('procure_on_demand')} className="rounded border-[0.5px] border-rule" />
-                <label htmlFor="pod" className="text-[13px] text-ink">Procure on demand (MTO)</label>
-              </div>
-              
-              {(() => {
-                const pod = form.watch('procure_on_demand');
-                return pod ? (
-                <div className="flex items-center gap-4 ml-6 p-4 bg-paper2 rounded border-[0.5px] border-rule">
-                  <label className="flex items-center gap-2 text-[13px]">
-                    <input type="radio" value="purchase" {...form.register('procurement_type')} />
-                    Purchase from Vendor
-                  </label>
-                  <label className="flex items-center gap-2 text-[13px]">
-                    <input type="radio" value="manufacturing" {...form.register('procurement_type')} />
-                    Manufacturing Order
-                  </label>
+              <div className="mt-8 border-t-[0.5px] border-rule pt-6">
+                <h3 className="text-sm font-semibold text-ink mb-4">Procurement</h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <input type="checkbox" id="pod" {...form.register('procure_on_demand')} className="rounded border-[0.5px] border-rule" />
+                  <label htmlFor="pod" className="text-[13px] text-ink">Procure on demand (MTO)</label>
                 </div>
-              ) : null;
-              })()}
-            </div>
+                
+                {(() => {
+                  const pod = form.watch('procure_on_demand');
+                  return pod ? (
+                  <div className="flex items-center gap-4 ml-6 p-4 bg-paper2 rounded border-[0.5px] border-rule">
+                    <label className="flex items-center gap-2 text-[13px]">
+                      <input type="radio" value="purchase" {...form.register('procurement_type')} />
+                      Purchase from Vendor
+                    </label>
+                    <label className="flex items-center gap-2 text-[13px]">
+                      <input type="radio" value="manufacturing" {...form.register('procurement_type')} />
+                      Manufacturing Order
+                    </label>
+                  </div>
+                ) : null;
+                })()}
+              </div>
+            </fieldset>
           </div>
 
           {/* Inventory Breakdown */}
           {!isNew && breakdown?.breakdown && (
             <div className="card p-6 mt-4">
               <h3 className="text-sm font-semibold text-ink mb-4">Inventory Breakdown</h3>
-              <div className="space-y-2">
-                {breakdown.breakdown.map((b, i) => (
-                  <div key={i} className="flex justify-between items-center text-[13px] py-1.5 border-b-[0.5px] border-rule last:border-0">
-                    <span className="text-steel">{b.category}</span>
-                    <span className={`font-mono font-semibold ${parseFloat(b.qty) < 0 ? 'text-rust' : 'text-success'}`}>
-                      {parseFloat(b.qty) > 0 ? '+' : ''}{parseFloat(b.qty).toFixed(3)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <table className="w-full text-left text-[13px]">
+                <thead>
+                  <tr className="border-b-[0.5px] border-rule text-steel">
+                    <th className="py-2 font-medium">Location</th>
+                    <th className="py-2 font-medium">Quantity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {breakdown.breakdown.map((b, i) => (
+                    <tr key={i} className="border-b-[0.5px] border-rule/50 last:border-0">
+                      <td className="py-2">{b.location_name || 'Main Warehouse'}</td>
+                      <td className="py-2 font-mono">{b.quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </FormShell.Body>
 
         <FormShell.Side>
-          <button
-            className="btn btn-rust justify-center"
-            onClick={form.handleSubmit((d) => saveMutation.mutate(d))}
-            disabled={saveMutation.isPending}
-          >
-            {saveMutation.isPending ? 'Saving...' : 'Save Product'}
-          </button>
+          {!isEditing ? (
+            <button type="button" className="btn justify-center" onClick={() => setIsEditing(true)}>
+              Edit Product
+            </button>
+          ) : (
+            <button className="btn btn-rust justify-center" onClick={form.handleSubmit(onSubmit)} disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? 'Saving...' : 'Save Product'}
+            </button>
+          )}
           
           {!isNew && (
             <>
