@@ -13,11 +13,13 @@ export default function ControlTower() {
   const { socket } = useSocket();
   const [seconds, setSeconds] = useState(0);
 
-  const { data: alerts, refetch } = useQuery({
+  const { data, refetch } = useQuery({
     queryKey: ['controlTower'],
     queryFn: async () => (await api.get(E.controlTower())).data,
     refetchInterval: 30000
   });
+
+  const alerts = data?.alerts || [];
 
   useEffect(() => {
     if (!socket) return;
@@ -35,9 +37,11 @@ export default function ControlTower() {
   }, [socket, refetch]);
 
   useEffect(() => {
-    setSeconds(0);
     const int = setInterval(() => setSeconds(s => s + 1), 1000);
-    return () => clearInterval(int);
+    return () => {
+      clearInterval(int);
+      setSeconds(0);
+    };
   }, [alerts]);
 
   const stats = [
@@ -47,7 +51,7 @@ export default function ControlTower() {
     { type: 'SUPPLIER_RISK', label: 'Supplier risk', color: 'info' }
   ];
 
-  const getCount = (type) => alerts?.filter(a => a.type === type).length || 0;
+  const getCount = (type) => alerts?.filter(a => a.alert_type === type).length || 0;
 
   const ICONS = {
     STOCK_CRITICAL: AlertCircle,
@@ -112,15 +116,15 @@ export default function ControlTower() {
           </div>
         ) : (
           alerts.map((a, i) => {
-            const color = stats.find(s => s.type === a.type)?.color || 'steel';
-            const Icon = ICONS[a.type] || AlertCircle;
+            const color = stats.find(s => s.type === a.alert_type)?.color || 'steel';
+            const Icon = ICONS[a.alert_type] || AlertCircle;
             
             return (
               <div key={i} className={`card flex flex-col sm:flex-row justify-between gap-4 border-l-4 border-l-${color} shadow-sm hover:shadow transition-shadow`} style={{ padding: '16px 20px' }}>
                 <div className="flex flex-col gap-1.5 flex-1">
                   <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wide text-steel">
                     <Icon size={16} className={`text-${color}`} />
-                    {a.type.replace('_', ' ')}
+                    {a.alert_type.replace('_', ' ')}
                   </div>
                   <div className="text-[16px] font-bold text-ink">{a.subject}</div>
                   <div className="text-[14px] text-steel max-w-[600px] leading-relaxed">{a.message}</div>
@@ -130,9 +134,18 @@ export default function ControlTower() {
                   <div className="font-mono text-[12px] text-ink font-bold bg-paper2 px-2 py-1 rounded border border-rule">
                     URGENCY: {a.urgency || 50}
                   </div>
-                  <button className="btn btn-rust mt-4" onClick={() => navigate(a.link || '/')}>
-                    Take Action
-                  </button>
+                  {(() => {
+                    let link = '/';
+                    if (a.entity_type === 'product') link = `/products/${a.entity_id}`;
+                    if (a.entity_type === 'work_center') link = `/work-centers/${a.entity_id}`;
+                    if (a.entity_type === 'sales_order') link = `/sales/${a.entity_id}`;
+                    if (a.entity_type === 'vendor') link = `/vendors/${a.entity_id}`;
+                    return (
+                      <button className="btn btn-rust mt-4" onClick={() => navigate(link)}>
+                        Take Action
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             );

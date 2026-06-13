@@ -43,7 +43,7 @@ export default function Login() {
       await login(data.login_id, data.password);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid credentials');
+      setError(err.response?.data?.error || 'Invalid credentials');
     }
   };
 
@@ -84,9 +84,10 @@ export default function Login() {
             {error && <div className="auth-error text-danger text-sm mb-4">{error}</div>}
             
             <div>
-              <label className="field-label">Login ID</label>
+              <label htmlFor="login_id" className="field-label">Login ID</label>
               <input 
                 {...register('login_id')}
+                id="login_id"
                 className="field w-full"
                 name="login_id"
                 autoComplete="username"
@@ -95,9 +96,10 @@ export default function Login() {
             </div>
             
             <div>
-              <label className="field-label">Password</label>
+              <label htmlFor="password" className="field-label">Password</label>
               <input 
                 {...register('password')}
+                id="password"
                 type="password"
                 className="field w-full"
                 name="password"

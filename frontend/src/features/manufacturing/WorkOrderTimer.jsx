@@ -13,7 +13,6 @@ export default function WorkOrderTimer({ workOrder, onAction }) {
       return seconds;
     };
 
-    setElapsed(computeElapsed());
 
     if (workOrder.status === 'in_progress') {
       interval = setInterval(() => {

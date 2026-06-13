@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const { requireAuth } = require('../../middleware/auth');
 const { requireModule, requireAdmin } = require('../../middleware/rbac');
 const validate = require('../../middleware/validate');
+const { uploadProductImage } = require('../../services/upload');
 const ctrl = require('./products.controller');
 
 const router = Router();
@@ -49,5 +50,13 @@ router.put('/:id', requireModule('Product', 'user'), ctrl.update);
 
 // DELETE /api/products/:id
 router.delete('/:id', requireAdmin, ctrl.remove);
+
+// POST /api/products/:id/image
+router.post('/:id/image', requireModule('Product', 'user'), (req, res, next) => {
+  uploadProductImage(req, res, (err) => {
+    if (err) return next(err);
+    next();
+  });
+}, ctrl.uploadImage);
 
 module.exports = router;

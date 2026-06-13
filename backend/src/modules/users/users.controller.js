@@ -200,4 +200,28 @@ async function updateAccess(req, res, next) {
   }
 }
 
-module.exports = { listUsers, getUser, createUser, updateUser, updateMe, updateAccess };
+// ── POST /api/users/me/avatar ───────────────────────────────
+async function uploadAvatar(req, res, next) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const userId = req.user.id;
+    // Build URL relative to the backend origin
+    const avatar_url = `/uploads/avatars/${req.file.filename}`;
+
+    const result = await query(
+      `UPDATE users SET avatar_url = $1, updated_at = NOW()
+       WHERE id = $2 RETURNING id, login_id, email, full_name, avatar_url`,
+      [avatar_url, userId]
+    );
+
+    res.json({ ok: true, avatar_url, user: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listUsers, getUser, createUser, updateUser, updateMe, updateAccess, uploadAvatar };
+

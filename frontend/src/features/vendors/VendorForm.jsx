@@ -51,7 +51,7 @@ export default function VendorForm({ mode }) {
       toast.success('Vendor saved');
       if (isNew) navigate(`/vendors/${data._id || data.id}`, { replace: true });
     },
-    onError: (err) => toast.error('Failed to save')
+    onError: () => toast.error('Failed to save')
   });
 
   if (!isNew && isLoading) return <div className="p-8 text-steel">Loading...</div>;

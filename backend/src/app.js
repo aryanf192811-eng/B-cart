@@ -3,6 +3,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const env = require('./config/env');
 const errorHandler = require('./middleware/error');
@@ -12,6 +13,7 @@ const healthRoutes         = require('./modules/health/health.routes');
 const authRoutes           = require('./modules/auth/auth.routes');
 const usersRoutes          = require('./modules/users/users.routes');
 const productsRoutes       = require('./modules/products/products.routes');
+const categoriesRoutes     = require('./modules/products/categories.routes');
 const vendorsRoutes        = require('./modules/vendors/vendors.routes');
 const customersRoutes      = require('./modules/customers/customers.routes');
 const workCentersRoutes    = require('./modules/work-centers/workCenters.routes');
@@ -45,6 +47,9 @@ if (env.nodeEnv !== 'test') {
   app.use(morgan('dev'));
 }
 
+// ── Static files (avatars, product images) ───────────────────
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
 // ── Rate limiting on auth ────────────────────────────────────
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,  // 1 minute
@@ -60,6 +65,7 @@ app.use('/api/health',         healthRoutes);
 app.use('/api/auth',           authRoutes);
 app.use('/api/users',          usersRoutes);
 app.use('/api/products',       productsRoutes);
+app.use('/api/categories',     categoriesRoutes);
 app.use('/api/vendors',        vendorsRoutes);
 app.use('/api/customers',      customersRoutes);
 app.use('/api/work-centers',   workCentersRoutes);

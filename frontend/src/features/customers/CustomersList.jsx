@@ -17,22 +17,23 @@ export default function CustomersList() {
     { key: 'name', label: 'CUSTOMER NAME' },
     { key: 'email', label: 'EMAIL' },
     { key: 'phone', label: 'PHONE' },
-    { key: 'address', label: 'ADDRESS' }
+    { key: 'address', label: 'ADDRESS', render: (r) => <span className="text-[12px] text-steel">{r.address || '—'}</span> }
   ];
 
   return (
     <div className="flex flex-col h-full gap-6">
       <Toolbar 
         title="Customers" 
+        count={listData?.total || 0}
         actions={<button onClick={() => navigate('/customers/new')} className="btn btn-rust">New</button>}
       />
       <div className="flex-1 bg-white border-[0.5px] border-rule rounded-md overflow-hidden flex flex-col min-h-[400px]">
         <div className="flex-1 overflow-auto">
           <DataTable 
             columns={columns}
-            rows={listData}
+            rows={listData?.rows || []}
             loading={isLoading}
-            onRowClick={(r) => navigate(`/customers/${r._id || r.id}`)}
+            onRowClick={(r) => navigate(`/customers/${r.id}`)}
             emptyMessage="No customers found."
           />
         </div>

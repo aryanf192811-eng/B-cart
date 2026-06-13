@@ -1,28 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
+import { Camera, Upload } from 'lucide-react';
 
 import { api } from '../../api/client';
 import { E } from '../../api/endpoints';
+import { assetUrl } from '../../utils/assetUrl';
 import FormShell from '../../components/FormShell';
 import { FieldRow, FieldGrid } from '../../components/FieldRow';
-import { MoneyInput } from '../../components/MoneyInput';
-import { QtyInput } from '../../components/QtyInput';
-import { Upload } from 'lucide-react';
+
 
 export default function ProductForm({ mode }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isNew = mode === 'new';
+  const imageInputRef = useRef(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
-  const { data: prod, isLoading } = useQuery({
+  const { data: prodData, isLoading } = useQuery({
     queryKey: ['products', id],
     queryFn: async () => (await api.get(E.product(id))).data,
     enabled: !isNew
   });
+
+  const prod = prodData?.product;
 
   const { data: breakdown } = useQuery({
     queryKey: ['products', id, 'breakdown'],
@@ -30,15 +34,39 @@ export default function ProductForm({ mode }) {
     enabled: !isNew
   });
 
-  const form = useForm({
-    defaultValues: { sku: '', name: '', category: '', imageUrl: '', unitOfMeasure: 'Units', salesPrice: 0, costPrice: 0, onHandQty: 0, minStockQty: 0, leadTimeDays: 0, procureOnDemand: false, procurementMethod: 'Purchase' }
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => (await api.get(E.categories())).data
   });
 
-  const procureOnDemand = form.watch('procureOnDemand');
+  const form = useForm({
+    defaultValues: {
+      sku: '', name: '', category_id: '', unit: 'Units',
+      sales_price: 0, cost_price: 0, on_hand_qty: 0,
+      min_stock_qty: 0, lead_time_days: 7,
+      procure_on_demand: false, procurement_type: 'purchase'
+    }
+  });
+
+
 
   useEffect(() => {
     if (!isNew && prod) {
-      form.reset(prod);
+      form.reset({
+        sku: prod.sku || '',
+        name: prod.name || '',
+        category_id: prod.category_id || '',
+        unit: prod.unit || 'Units',
+        sales_price: parseFloat(prod.sales_price) || 0,
+        cost_price: parseFloat(prod.cost_price) || 0,
+        on_hand_qty: parseFloat(prod.on_hand_qty) || 0,
+        min_stock_qty: parseFloat(prod.min_stock_qty) || 0,
+        lead_time_days: prod.lead_time_days || 7,
+        procure_on_demand: prod.procure_on_demand || false,
+        procurement_type: prod.procurement_type || 'purchase',
+        default_vendor_id: prod.default_vendor_id || null,
+      });
+      if (prod.image_url) setImagePreview(assetUrl(prod.image_url));
     }
   }, [prod, isNew, form]);
 
@@ -59,28 +87,97 @@ export default function ProductForm({ mode }) {
       return (await api.put(E.product(id), data)).data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries(['products']);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Product saved');
-      if (isNew) navigate(`/products/${data._id || data.id}`, { replace: true });
+      const savedId = data?.product?.id || id;
+      if (isNew) navigate(`/products/${savedId}`, { replace: true });
     },
-    onError: (err) => toast.error('Failed to save product')
+    onError: (err) => toast.error(err?.response?.data?.error || 'Failed to save product')
   });
 
+  const imageMutation = useMutation({
+    mutationFn: async (file) => {
+      const form = new FormData();
+      form.append('image', file);
+      return (await api.post(E.productImage(id), form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })).data;
+    },
+    onSuccess: (data) => {
+      setImagePreview(data.image_url);
+      queryClient.invalidateQueries({ queryKey: ['products', id] });
+      toast.success('Image uploaded');
+    },
+    onError: () => toast.error('Image upload failed')
+  });
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (isNew) {
+      toast.error('Save product first, then upload an image.');
+      return;
+    }
+    const localUrl = URL.createObjectURL(file);
+    setImagePreview(localUrl);
+    imageMutation.mutate(file);
+  };
+
   if (!isNew && isLoading) return <div className="p-8 text-steel">Loading...</div>;
+
+  const onHandQty = parseFloat(prod?.on_hand_qty) || 0;
+  const freeToUseQty = parseFloat(prod?.free_to_use_qty) || 0;
+  const reservedQty = parseFloat(prod?.reserved_qty) || 0;
 
   return (
     <div className="h-full">
       <FormShell>
-        <FormShell.Header 
+        <FormShell.Header
           title={isNew ? 'New Product' : prod?.name}
           subtitle={prod?.category}
           reference={prod?.sku}
         />
         
-        <FormShell.Tabs tabs={[{ id: 'general', label: 'General Information' }]} active="general" onChange={()=>{}} />
+        <FormShell.Tabs tabs={[{ id: 'general', label: 'General Information' }]} active="general" onChange={() => {}} />
 
         <FormShell.Body>
           <div className="card p-6">
+            {/* Product Image */}
+            {!isNew && (
+              <div className="mb-6 flex items-start gap-5">
+                <div
+                  className="w-24 h-24 rounded-lg border-[0.5px] border-rule bg-paper2 flex items-center justify-center overflow-hidden cursor-pointer group relative"
+                  onClick={() => imageInputRef.current?.click()}
+                >
+                  {imagePreview
+                    ? <img src={imagePreview} alt={prod?.name} className="w-full h-full object-cover" />
+                    : <Camera size={28} className="text-steel group-hover:text-rust transition-colors" />
+                  }
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Upload size={18} className="text-white" />
+                  </div>
+                </div>
+                <div className="pt-1">
+                  <div className="text-[12px] font-semibold text-ink mb-1">Product Image</div>
+                  <div className="text-[11px] text-steel mb-2">Click to upload. JPEG, PNG, WebP up to 5 MB.</div>
+                  <button
+                    type="button"
+                    className="text-[12px] text-rust hover:underline font-medium"
+                    onClick={() => imageInputRef.current?.click()}
+                  >
+                    {imageMutation.isPending ? 'Uploading...' : imagePreview ? 'Change Image' : 'Upload Image'}
+                  </button>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
+                </div>
+              </div>
+            )}
+
             <FieldGrid>
               <FieldRow label="SKU">
                 <input {...form.register('sku')} className="field font-mono" disabled={!isNew} />
@@ -89,77 +186,88 @@ export default function ProductForm({ mode }) {
                 <input {...form.register('name')} className="field" />
               </FieldRow>
               <FieldRow label="Category">
-                <input {...form.register('category')} className="field" />
-              </FieldRow>
-              <FieldRow label="Image">
-                <div className="flex gap-3 items-center w-full">
-                  <div className="relative flex-1 flex items-center">
-                    <input {...form.register('imageUrl')} className="field w-full pr-10" placeholder="Paste URL or upload..." />
-                    <label className="absolute right-2 cursor-pointer text-steel hover:text-rust transition-colors">
-                      <Upload size={16} />
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                    </label>
-                  </div>
-                  {form.watch('imageUrl') && (
-                    <img 
-                      src={form.watch('imageUrl')} 
-                      alt="Preview" 
-                      className="w-8 h-8 rounded object-cover bg-white border-[0.5px] border-rule flex-shrink-0" 
-                      onError={(e) => e.target.style.display='none'} 
-                    />
-                  )}
-                </div>
-              </FieldRow>
-              <FieldRow label="Unit of Measure">
-                <select {...form.register('unitOfMeasure')} className="field">
-                  <option value="Units">Units</option>
-                  <option value="kg">kg</option>
-                  <option value="m">m</option>
-                  <option value="pack">pack</option>
+                <select {...form.register('category_id', { valueAsNumber: true })} className="field">
+                  <option value="">-- Select Category --</option>
+                  {Array.isArray(categories) && categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
               </FieldRow>
-              <FieldRow label="Sales Price">
-                <MoneyInput {...form.register('salesPrice', { valueAsNumber: true })} />
+              <FieldRow label="Unit of Measure">
+                <select {...form.register('unit')} className="field">
+                  <option value="Units">Units</option>
+                  <option value="kg">kg</option>
+                  <option value="Meters">Meters</option>
+                  <option value="Packs">Packs</option>
+                  <option value="Liters">Liters</option>
+                </select>
               </FieldRow>
-              <FieldRow label="Cost Price">
-                <MoneyInput {...form.register('costPrice', { valueAsNumber: true })} />
+              <FieldRow label="Sales Price (₹)">
+                <input type="number" step="0.01" min="0" {...form.register('sales_price', { valueAsNumber: true })} className="field font-mono" />
+              </FieldRow>
+              <FieldRow label="Cost Price (₹)">
+                <input type="number" step="0.01" min="0" {...form.register('cost_price', { valueAsNumber: true })} className="field font-mono" />
               </FieldRow>
               <FieldRow label="On Hand Qty" hint="Editing this writes a stock adjustment">
-                <QtyInput {...form.register('onHandQty', { valueAsNumber: true })} />
+                <input type="number" step="0.001" min="0" {...form.register('on_hand_qty', { valueAsNumber: true })} className="field font-mono" />
               </FieldRow>
               <FieldRow label="Min Stock Qty">
-                <QtyInput {...form.register('minStockQty', { valueAsNumber: true })} />
+                <input type="number" step="0.001" min="0" {...form.register('min_stock_qty', { valueAsNumber: true })} className="field font-mono" />
               </FieldRow>
               <FieldRow label="Lead Time (days)">
-                <QtyInput {...form.register('leadTimeDays', { valueAsNumber: true })} />
+                <input type="number" step="1" min="0" {...form.register('lead_time_days', { valueAsNumber: true })} className="field font-mono" />
               </FieldRow>
             </FieldGrid>
 
             <div className="mt-8 border-t-[0.5px] border-rule pt-6">
               <h3 className="text-sm font-semibold text-ink mb-4">Procurement</h3>
               <div className="flex items-center gap-2 mb-4">
-                <input type="checkbox" id="pod" {...form.register('procureOnDemand')} className="rounded border-[0.5px] border-rule" />
+                <input type="checkbox" id="pod" {...form.register('procure_on_demand')} className="rounded border-[0.5px] border-rule" />
                 <label htmlFor="pod" className="text-[13px] text-ink">Procure on demand (MTO)</label>
               </div>
               
-              {procureOnDemand && (
+              {(() => {
+                const pod = form.watch('procure_on_demand');
+                return pod ? (
                 <div className="flex items-center gap-4 ml-6 p-4 bg-paper2 rounded border-[0.5px] border-rule">
                   <label className="flex items-center gap-2 text-[13px]">
-                    <input type="radio" value="Purchase" {...form.register('procurementMethod')} />
-                    Purchase
+                    <input type="radio" value="purchase" {...form.register('procurement_type')} />
+                    Purchase from Vendor
                   </label>
                   <label className="flex items-center gap-2 text-[13px]">
-                    <input type="radio" value="Manufacturing" {...form.register('procurementMethod')} />
-                    Manufacturing
+                    <input type="radio" value="manufacturing" {...form.register('procurement_type')} />
+                    Manufacturing Order
                   </label>
                 </div>
-              )}
+              ) : null;
+              })()}
             </div>
           </div>
+
+          {/* Inventory Breakdown */}
+          {!isNew && breakdown?.breakdown && (
+            <div className="card p-6 mt-4">
+              <h3 className="text-sm font-semibold text-ink mb-4">Inventory Breakdown</h3>
+              <div className="space-y-2">
+                {breakdown.breakdown.map((b, i) => (
+                  <div key={i} className="flex justify-between items-center text-[13px] py-1.5 border-b-[0.5px] border-rule last:border-0">
+                    <span className="text-steel">{b.category}</span>
+                    <span className={`font-mono font-semibold ${parseFloat(b.qty) < 0 ? 'text-rust' : 'text-success'}`}>
+                      {parseFloat(b.qty) > 0 ? '+' : ''}{parseFloat(b.qty).toFixed(3)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </FormShell.Body>
 
         <FormShell.Side>
-          <button className="btn btn-rust justify-center" onClick={form.handleSubmit((d) => saveMutation.mutate(d))} disabled={saveMutation.isPending}>
+          <button
+            className="btn btn-rust justify-center"
+            onClick={form.handleSubmit((d) => saveMutation.mutate(d))}
+            disabled={saveMutation.isPending}
+          >
             {saveMutation.isPending ? 'Saving...' : 'Save Product'}
           </button>
           
@@ -170,16 +278,21 @@ export default function ProductForm({ mode }) {
                 <div className="space-y-3 font-mono text-[13px]">
                   <div className="flex justify-between items-center">
                     <span className="text-steel font-sans text-[12px]">ON HAND</span>
-                    <span className="text-ink text-base">{prod?.onHandQty || 0} {prod?.unitOfMeasure}</span>
+                    <span className="text-ink text-base">{onHandQty.toFixed(3)} {prod?.unit}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-steel font-sans text-[12px]">FREE</span>
-                    <span className="text-success text-base">{prod?.freeToUseQty || (prod?.onHandQty - (prod?.reservedQty || 0))} {prod?.unitOfMeasure}</span>
+                    <span className="text-steel font-sans text-[12px]">FREE TO USE</span>
+                    <span className="text-success text-base">{freeToUseQty.toFixed(3)} {prod?.unit}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-steel font-sans text-[12px]">RESERVED</span>
-                    <span className="text-warn text-base">{prod?.reservedQty || 0} {prod?.unitOfMeasure}</span>
+                    <span className="text-warn text-base">{reservedQty.toFixed(3)} {prod?.unit}</span>
                   </div>
+                  {prod?.is_low_stock && (
+                    <div className="mt-2 text-[11px] font-bold text-rust uppercase bg-rust/10 px-2 py-1 rounded text-center tracking-wide">
+                      ⚠ Below Minimum Stock
+                    </div>
+                  )}
                 </div>
               </div>
 

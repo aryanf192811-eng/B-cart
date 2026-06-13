@@ -66,7 +66,7 @@ export default function AuditLogs() {
         <div className="flex-1 overflow-auto">
           <DataTable 
             columns={columns}
-            rows={logs}
+            rows={logs?.rows || (Array.isArray(logs) ? logs : [])}
             loading={isLoading}
             emptyMessage="No audit logs found."
           />

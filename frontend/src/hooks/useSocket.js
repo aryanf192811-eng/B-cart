@@ -8,13 +8,19 @@ export const useSocket = () => {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
     const s = io(URL, { withCredentials: true });
-    setSocket(s);
-
-    s.on('connect', () => setConnected(true));
+    
+    s.on('connect', () => {
+      if (mounted) {
+        setSocket(s);
+        setConnected(true);
+      }
+    });
     s.on('disconnect', () => setConnected(false));
 
     return () => {
+      mounted = false;
       s.disconnect();
     };
   }, []);

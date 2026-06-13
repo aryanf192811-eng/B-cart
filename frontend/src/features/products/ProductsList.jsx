@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { E } from '../../api/endpoints';
+
 import Toolbar from '../../components/Toolbar';
 import DataTable from '../../components/DataTable';
 
@@ -30,10 +31,10 @@ export default function ProductsList() {
       )
     },
     { key: 'category', label: 'CATEGORY' },
-    { key: 'salesPrice', label: 'SALES PRICE', align: 'right', render: (r) => <span className="font-mono">₹ {(r.salesPrice || 0).toFixed(2)}</span> },
-    { key: 'costPrice', label: 'COST PRICE', align: 'right', render: (r) => <span className="font-mono">₹ {(r.costPrice || 0).toFixed(2)}</span> },
-    { key: 'onHandQty', label: 'ON HAND', align: 'right', render: (r) => <span className="font-mono">{r.onHandQty || 0}</span> },
-    { key: 'freeToUseQty', label: 'FREE TO USE', align: 'right', render: (r) => <span className="font-mono">{r.freeToUseQty || (r.onHandQty - (r.reservedQty || 0))}</span> },
+    { key: 'salesPrice', label: 'SALES PRICE', align: 'right', render: (r) => <span className="font-mono">₹ {Number(r.sales_price || r.salesPrice || 0).toFixed(2)}</span> },
+    { key: 'costPrice', label: 'COST PRICE', align: 'right', render: (r) => <span className="font-mono">₹ {Number(r.cost_price || r.costPrice || 0).toFixed(2)}</span> },
+    { key: 'onHandQty', label: 'ON HAND', align: 'right', render: (r) => <span className="font-mono">{r.on_hand_qty || 0}</span> },
+    { key: 'freeToUseQty', label: 'FREE TO USE', align: 'right', render: (r) => <span className="font-mono">{r.free_to_use_qty || ((r.on_hand_qty || 0) - (r.reserved_qty || 0))}</span> },
     { key: 'unitOfMeasure', label: 'UNIT', align: 'right' }
   ];
 
@@ -47,7 +48,7 @@ export default function ProductsList() {
         <div className="flex-1 overflow-auto">
           <DataTable 
             columns={columns}
-            rows={listData}
+            rows={listData?.rows || (Array.isArray(listData) ? listData : [])}
             loading={isLoading}
             onRowClick={(r) => navigate(`/products/${r._id || r.id}`)}
             emptyMessage="No products found."

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, FileText, ShoppingCart, Truck, Factory, Activity, CheckCircle2, Radar } from 'lucide-react';
+import { AlertCircle, ShoppingCart, Truck, Factory, Activity, CheckCircle2, Radar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 
@@ -36,7 +36,7 @@ export default function Dashboard() {
     queryKey: ['control-tower-alerts'],
     queryFn: async () => {
       const { data } = await api.get(E.controlTower());
-      return data.slice(0, 5); // top 5
+      return data.alerts?.slice(0, 5) || []; // top 5
     }
   });
 
@@ -50,10 +50,9 @@ export default function Dashboard() {
       if (activeTab === 'sales') endpoint = `${E.sales()}?limit=8`;
       if (activeTab === 'purchase') endpoint = `${E.purchase()}?limit=8`;
       if (activeTab === 'manufacturing') endpoint = `${E.mo()}?limit=8`;
-
-      const { data } = await api.get(endpoint);
-      // Filter out fully done items if backend hasn't
-      return data.filter(i => !['fully_delivered', 'fully_received', 'done', 'cancelled'].includes(i.status)).slice(0, 8);
+      const res = await api.get(endpoint);
+      const rows = res.data.rows || res.data;
+      return rows.filter(i => !['fully_delivered', 'fully_received', 'done', 'cancelled'].includes(i.status)).slice(0, 8);
     }
   });
 
@@ -196,9 +195,9 @@ export default function Dashboard() {
               loading={!tabData && kpiData !== undefined} // simulate loading if refetching
               rows={tabData || []}
               columns={[
-                { key: activeTab === 'sales' ? 'soNumber' : activeTab === 'purchase' ? 'poNumber' : 'moNumber', label: 'REF', render: (r) => <span className="font-mono">{r.soNumber || r.poNumber || r.moNumber}</span> },
-                { key: 'counterparty', label: 'COUNTERPARTY', render: (r) => r.customerName || r.vendorName || r.finishedProduct?.name || 'Unknown' },
-                { key: 'createdAt', label: 'DATE', render: (r) => <span className="text-steel">{format(new Date(r.createdAt || Date.now()), 'MMM d')}</span> },
+                { key: activeTab === 'sales' ? 'so_number' : activeTab === 'purchase' ? 'po_number' : 'mo_number', label: 'REF', render: (r) => <span className="font-mono">{r.so_number || r.po_number || r.mo_number || r.soNumber || r.poNumber || r.moNumber}</span> },
+                { key: 'counterparty', label: 'COUNTERPARTY', render: (r) => r.customer_name || r.vendor_name || r.product_name || r.customerName || r.vendorName || r.finishedProduct?.name || 'Unknown' },
+                { key: 'createdAt', label: 'DATE', render: (r) => <span className="text-steel">{format(new Date(r.created_at || r.createdAt || Date.now()), 'MMM d')}</span> },
                 { key: 'status', label: 'STATUS', render: (r) => <StatusBadge status={r.status} /> }
               ]}
               emptyMessage="No open operations in queue."

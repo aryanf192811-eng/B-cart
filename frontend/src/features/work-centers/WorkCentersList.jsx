@@ -14,7 +14,7 @@ export default function WorkCentersList() {
     { key: 'name', label: 'WORK CENTER' },
     { key: 'capacityPerHour', label: 'CAPACITY/HR', render: (r) => <span className="font-mono">{r.capacityPerHour}</span> },
     { key: 'costPerHour', label: 'COST/HR', render: (r) => <span className="font-mono">₹ {r.costPerHour}</span> },
-    { key: 'utilization', label: 'UTILIZATION', render: (r) => {
+    { key: 'utilization', label: 'UTILIZATION', render: () => {
         const util = Math.floor(Math.random() * 100); // Mock util since it's not purely backed right now
         const isHigh = util > 80;
         return (
@@ -36,7 +36,7 @@ export default function WorkCentersList() {
         <div className="flex-1 overflow-auto">
           <DataTable 
             columns={columns}
-            rows={listData}
+            rows={listData?.rows || (Array.isArray(listData) ? listData : [])}
             loading={isLoading}
             emptyMessage="No work centers found."
           />

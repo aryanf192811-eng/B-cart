@@ -33,7 +33,7 @@ async function list(req, res, next) {
       idx++;
     }
     if (category) {
-      conditions.push(`category = $${idx}`);
+      conditions.push(`category_id = $${idx}`);
       params.push(category);
       idx++;
     }
@@ -92,7 +92,7 @@ async function getById(req, res, next) {
 async function create(req, res, next) {
   try {
     const {
-      sku, name, category, unit, sales_price, cost_price,
+      sku, name, category_id, unit, sales_price, cost_price,
       on_hand_qty, min_stock_qty, lead_time_days,
       procure_on_demand, procurement_type, default_vendor_id, default_bom_id,
     } = req.body;
@@ -100,13 +100,13 @@ async function create(req, res, next) {
     const product = await withTransaction(async (client) => {
       const { rows } = await client.query(
         `INSERT INTO products
-           (sku, name, category, unit, sales_price, cost_price,
+           (sku, name, category_id, unit, sales_price, cost_price,
             on_hand_qty, min_stock_qty, lead_time_days,
             procure_on_demand, procurement_type, default_vendor_id, default_bom_id)
          VALUES ($1,$2,$3,$4,$5,$6, $7,$8,$9,$10,$11,$12,$13)
          RETURNING *`,
         [
-          sku, name, category || null, unit || 'Units',
+          sku, name, category_id || null, unit || 'Units',
           sales_price || 0, cost_price || 0,
           0, // always start at 0 — opening stock via ledger
           min_stock_qty || 0, lead_time_days || 7,
@@ -165,7 +165,7 @@ async function update(req, res, next) {
       const oldRow = oldResult.rows[0];
 
       const {
-        name, category, unit, sales_price, cost_price,
+        name, category_id, unit, sales_price, cost_price,
         on_hand_qty, min_stock_qty, lead_time_days,
         procure_on_demand, procurement_type, default_vendor_id, default_bom_id,
       } = req.body;
@@ -190,7 +190,7 @@ async function update(req, res, next) {
       const { rows } = await client.query(
         `UPDATE products SET
            name = COALESCE($1, name),
-           category = COALESCE($2, category),
+           category_id = COALESCE($2, category_id),
            unit = COALESCE($3, unit),
            sales_price = COALESCE($4, sales_price),
            cost_price = COALESCE($5, cost_price),
@@ -204,7 +204,7 @@ async function update(req, res, next) {
          WHERE id = $12
          RETURNING *`,
         [
-          name, category, unit, sales_price, cost_price,
+          name, category_id, unit, sales_price, cost_price,
           min_stock_qty, lead_time_days, procure_on_demand, procurement_type,
           default_vendor_id !== undefined ? default_vendor_id : oldRow.default_vendor_id,
           default_bom_id !== undefined ? default_bom_id : oldRow.default_bom_id,
@@ -370,4 +370,30 @@ async function inventoryBreakdown(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create, update, remove, inventoryBreakdown };
+// ── POST /api/products/:id/image ────────────────────────────
+async function uploadImage(req, res, next) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    const { id } = req.params;
+    const image_url = `/uploads/products/${req.file.filename}`;
+
+    const result = await query(
+      'UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2 RETURNING id, sku, image_url',
+      [image_url, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    emitSocket(req, 'product:updated', { id: parseInt(id) });
+    res.json({ ok: true, image_url, product: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, getById, create, update, remove, inventoryBreakdown, uploadImage };
+

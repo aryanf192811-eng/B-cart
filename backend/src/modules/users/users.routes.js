@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const { requireAuth } = require('../../middleware/auth');
 const { requireAdmin } = require('../../middleware/rbac');
 const validate = require('../../middleware/validate');
+const { uploadAvatar } = require('../../services/upload');
 const ctrl = require('./users.controller');
 
 const router = Router();
@@ -24,10 +25,17 @@ router.patch(
       .trim()
       .isLength({ max: 20 }),
     body('address').optional().trim(),
-    body('avatar_url').optional().trim().isURL().withMessage('Invalid URL'),
   ]),
   ctrl.updateMe
 );
+
+// ── Avatar upload ─────────────────────────────────────────────
+router.post('/me/avatar', (req, res, next) => {
+  uploadAvatar(req, res, (err) => {
+    if (err) return next(err);
+    next();
+  });
+}, ctrl.uploadAvatar);
 
 // ── Admin-only routes ───────────────────────────────────────
 router.get('/', requireAdmin, ctrl.listUsers);

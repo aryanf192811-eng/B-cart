@@ -11,13 +11,12 @@ import { api } from '../../api/client';
 import { E } from '../../api/endpoints';
 import FormShell from '../../components/FormShell';
 import { FieldRow, FieldGrid } from '../../components/FieldRow';
-import StatusBadge from '../../components/StatusBadge';
 import Drawer from '../../components/Drawer';
 import { MoneyInput as MInput } from '../../components/MoneyInput';
 import { QtyInput as QInput } from '../../components/QtyInput';
 
 const salesSchema = z.object({
-  customerName: z.string().min(1, 'Required'),
+  customer_id: z.string().min(1, 'Required').or(z.number()),
   customerAddress: z.string().optional(),
   salesPerson: z.string().optional().nullable(),
   items: z.array(z.object({
@@ -37,12 +36,25 @@ export default function SalesForm({ mode }) {
   const [deliverDrawerOpen, setDeliverDrawerOpen] = useState(false);
   const [deliverQuantities, setDeliverQuantities] = useState({});
 
-  const { data: users } = useQuery({ queryKey: ['users'], queryFn: async () => (await api.get(E.users())).data });
-  const { data: products } = useQuery({ queryKey: ['products'], queryFn: async () => (await api.get(E.products())).data });
+  const { data: users } = useQuery({ queryKey: ['users'], queryFn: async () => {
+    const d = await api.get(E.users());
+    return d.data.users || d.data;
+  }});
+  const { data: products } = useQuery({ queryKey: ['products'], queryFn: async () => {
+    const d = await api.get(E.products());
+    return d.data.rows || d.data;
+  }});
+  const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: async () => {
+    const d = await api.get(E.customers());
+    return d.data.rows || d.data;
+  }});
 
   const { data: so, isLoading, refetch } = useQuery({
     queryKey: ['sales', id],
-    queryFn: async () => (await api.get(E.salesOne(id))).data,
+    queryFn: async () => {
+      const res = await api.get(E.salesOne(id));
+      return res.data.sales_order || res.data;
+    },
     enabled: !isNew
   });
 
@@ -62,28 +74,37 @@ export default function SalesForm({ mode }) {
   useEffect(() => {
     if (!isNew && so) {
       form.reset({
-        customerName: so.customerName,
+        customer_id: so.customer_id || '',
         customerAddress: so.customerAddress || '',
-        salesPerson: so.salesPerson?._id || so.salesPerson || '',
-        items: so.items.map(i => ({
-          product: i.product?._id || i.product,
-          orderedQuantity: i.orderedQuantity,
-          salesPrice: i.salesPrice
-        }))
+        salesPerson: so.salesperson_id || '',
+        items: so.lines?.map(i => ({
+          product: i.product_id,
+          orderedQuantity: i.qty_ordered,
+          salesPrice: i.unit_price
+        })) || []
       });
     }
   }, [so, isNew, form]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const payload = { ...data, items: data.items.map(i => ({...i, total: i.orderedQuantity * i.salesPrice})) };
+      const payload = {
+        customer_id: data.customer_id,
+        salesperson_id: data.salesPerson || null,
+        lines: data.items.map(i => ({
+          product_id: i.product,
+          qty_ordered: i.orderedQuantity,
+          unit_price: i.salesPrice
+        }))
+      };
       if (isNew) return (await api.post(E.sales(), payload)).data;
       return (await api.put(E.salesOne(id), payload)).data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['sales']);
       toast.success(isNew ? 'Draft created' : 'Saved');
-      if (isNew) navigate(`/sales/${data._id || data.id}`, { replace: true });
+      const soId = data.sales_order?.id || data.id;
+      if (isNew && soId) navigate(`/sales/${soId}`, { replace: true });
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to save')
   });
@@ -129,9 +150,9 @@ export default function SalesForm({ mode }) {
     <div className="h-full">
       <FormShell>
         <FormShell.Header 
-          title={isNew ? 'New sales order' : `Sales order ${so?.soNumber}`}
-          subtitle={isNew ? 'Draft' : so?.customerName}
-          reference={isNew ? '—' : so?.soNumber}
+          title={isNew ? 'New sales order' : `Sales order ${so?.so_number}`}
+          subtitle={isNew ? 'Draft' : so?.customer_name}
+          reference={isNew ? '—' : so?.so_number}
           status={isNew ? 'draft' : so?.status}
         />
         
@@ -150,8 +171,11 @@ export default function SalesForm({ mode }) {
         <FormShell.Body>
           <div className="card p-6">
             <FieldGrid>
-              <FieldRow label="Customer" required error={form.formState.errors.customerName?.message}>
-                <input {...form.register('customerName')} className="field" disabled={!isDraft} />
+              <FieldRow label="Customer" required error={form.formState.errors.customer_id?.message}>
+                <select {...form.register('customer_id')} className="field" disabled={!isDraft}>
+                  <option value="">Select customer...</option>
+                  {customers?.map?.(c => <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>)}
+                </select>
               </FieldRow>
               <FieldRow label="Customer Address">
                 <input {...form.register('customerAddress')} className="field" disabled={!isDraft} />
@@ -164,7 +188,7 @@ export default function SalesForm({ mode }) {
               </FieldRow>
               <FieldRow label="Creation Date">
                 <div className="font-mono text-steel py-2">
-                  {isNew ? format(new Date(), 'dd MMM yyyy') : format(new Date(so?.createdAt), 'dd MMM yyyy')}
+                  {isNew ? format(new Date(), 'dd MMM yyyy') : format(new Date(so?.created_at || new Date()), 'dd MMM yyyy')}
                 </div>
               </FieldRow>
             </FieldGrid>
@@ -184,14 +208,22 @@ export default function SalesForm({ mode }) {
                 </tr>
               </thead>
               <tbody>
-                {fields.map((f, i) => {
-                  const ordered = form.watch(`items.${i}.orderedQuantity`) || 0;
-                  const price = form.watch(`items.${i}.salesPrice`) || 0;
-                  const prodId = form.watch(`items.${i}.product`);
-                  const prod = products?.find(p => p._id === prodId);
+                {(() => {
+                  const itemsWatched = (() => {
+                    try {
+                      return form.watch('items');
+                    } catch(e) {
+                      return [];
+                    }
+                  })();
+                  return fields.map((f, i) => {
+                    const ordered = itemsWatched?.[i]?.orderedQuantity || 0;
+                    const price = itemsWatched?.[i]?.salesPrice || 0;
+                    const prodId = itemsWatched?.[i]?.product;
+                  const prod = products?.find?.(p => p.id == prodId || p._id == prodId);
                   
-                  const origItem = so?.items?.[i];
-                  const delivered = origItem?.deliveredQuantity || 0;
+                  const origItem = so?.lines?.[i];
+                  const delivered = origItem?.qty_delivered || 0;
                   
                   let availableStatus = null;
                   if (!isNew && prod) {
@@ -205,7 +237,7 @@ export default function SalesForm({ mode }) {
                       <td className="px-3 py-2">
                         <select {...form.register(`items.${i}.product`)} className="field w-full" disabled={!isDraft}>
                           <option value="">Select product...</option>
-                          {products?.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                          {products?.map?.(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
                         </select>
                       </td>
                       {!isNew && (
@@ -236,7 +268,8 @@ export default function SalesForm({ mode }) {
                       )}
                     </tr>
                   );
-                })}
+                });
+              })()}
               </tbody>
             </table>
             {isDraft && (
@@ -322,7 +355,7 @@ export default function SalesForm({ mode }) {
                 <div className="relative pl-4">
                   <div className="absolute w-2 h-2 rounded-full bg-steel2 -left-[4.5px] top-[6px]"></div>
                   <div className="text-[13px] text-ink">Draft</div>
-                  <div className="text-[11px] text-steel font-mono">{format(new Date(so.createdAt), 'dd MMM HH:mm')}</div>
+                  <div className="text-[11px] text-steel font-mono">{format(new Date(so?.created_at || new Date()), 'dd MMM HH:mm')}</div>
                 </div>
               </div>
             </div>
@@ -338,19 +371,22 @@ export default function SalesForm({ mode }) {
           <>
             <button className="btn btn-ghost" onClick={() => setDeliverDrawerOpen(false)}>Cancel</button>
             <button className="btn btn-rust" onClick={() => {
-              const lines = Object.entries(deliverQuantities).map(([itemId, qty]) => ({
-                id: itemId,
-                qty_delivered: (so.items.find(i => i._id === itemId)?.deliveredQuantity || 0) + qty
-              })).filter(l => l.qty_delivered > 0);
+              const lines = Object.entries(deliverQuantities).map(([itemId, qty]) => {
+                const lineId = so.lines.find(i => i.product_id == itemId || i.id == itemId)?.id;
+                return {
+                  id: lineId,
+                  qty_delivered: (so.lines.find(i => i.id == lineId)?.qty_delivered || 0) + qty
+                };
+              }).filter(l => l.qty_delivered > 0);
               actionMutation.mutate({ action: 'deliver', payload: { lines } });
             }}>Submit delivery</button>
           </>
         }
       >
         <div className="space-y-4">
-          {so?.items?.map(item => {
-            const prod = item.product;
-            const remaining = item.orderedQuantity - (item.deliveredQuantity || 0);
+          {so?.lines?.map(item => {
+            const prod = products?.find?.(p => p.id == item.product_id || p._id == item.product_id);
+            const remaining = item.qty_ordered - (item.qty_delivered || 0);
             if (remaining <= 0) return null;
             
             const freeToUse = prod?.freeToUseQty || 0;
@@ -367,8 +403,8 @@ export default function SalesForm({ mode }) {
                   placeholder="Qty to deliver" 
                   max={max}
                   min={0}
-                  value={deliverQuantities[item._id] || 0}
-                  onChange={(e) => setDeliverQuantities(p => ({...p, [item._id]: Number(e.target.value)}))}
+                  value={deliverQuantities[item.id]?.qty || 0}
+                  onChange={(e) => setDeliverQuantities(p => ({...p, [item.id]: Number(e.target.value)}))}
                 />
               </div>
             );

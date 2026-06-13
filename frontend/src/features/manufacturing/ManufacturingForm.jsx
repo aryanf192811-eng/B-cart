@@ -23,12 +23,21 @@ export default function ManufacturingForm({ mode }) {
   const [activeTab, setActiveTab] = useState('components');
   const [produceDialogOpen, setProduceDialogOpen] = useState(false);
 
-  const { data: users } = useQuery({ queryKey: ['users'], queryFn: async () => (await api.get(E.users())).data });
-  const { data: products } = useQuery({ queryKey: ['products'], queryFn: async () => (await api.get(E.products())).data });
+  const { data: users } = useQuery({ queryKey: ['users'], queryFn: async () => {
+    const d = await api.get(E.users());
+    return d.data.users || d.data.rows || d.data;
+  }});
+  const { data: products } = useQuery({ queryKey: ['products'], queryFn: async () => {
+    const d = await api.get(E.products());
+    return d.data.rows || d.data;
+  }});
 
   const { data: mo, isLoading, refetch } = useQuery({
     queryKey: ['manufacturing', id],
-    queryFn: async () => (await api.get(E.moOne(id))).data,
+    queryFn: async () => {
+      const d = (await api.get(E.moOne(id))).data;
+      return d.manufacturing_order || d;
+    },
     enabled: !isNew
   });
 
@@ -45,7 +54,14 @@ export default function ManufacturingForm({ mode }) {
   const { fields: compFields } = useFieldArray({ control: form.control, name: 'components' });
   const { fields: woFields } = useFieldArray({ control: form.control, name: 'workOrders' });
 
-  const finishedProductId = form.watch('finishedProduct');
+  const formFinishedProductId = (() => {
+    try {
+      return form.watch('finishedProduct');
+    } catch (e) {
+      return '';
+    }
+  })();
+  const finishedProductId = formFinishedProductId || '';
 
   const { data: boms } = useQuery({
     queryKey: ['boms', finishedProductId],
@@ -56,13 +72,13 @@ export default function ManufacturingForm({ mode }) {
   useEffect(() => {
     if (!isNew && mo) {
       form.reset({
-        finishedProduct: mo.finishedProduct?._id || mo.finishedProduct || '',
-        quantityToProduce: mo.quantityToProduce,
-        billOfMaterials: mo.billOfMaterials?._id || mo.billOfMaterials || '',
-        scheduledDate: mo.scheduledDate ? format(new Date(mo.scheduledDate), 'yyyy-MM-dd') : '',
-        responsiblePerson: mo.responsiblePerson?._id || mo.responsiblePerson || '',
+        finishedProduct: mo.product_id || '',
+        quantityToProduce: mo.qty || 1,
+        billOfMaterials: mo.bom_id || '',
+        scheduledDate: mo.schedule_date ? format(new Date(mo.schedule_date), 'yyyy-MM-dd') : '',
+        responsiblePerson: mo.assignee_id || '',
         components: mo.components || [],
-        workOrders: mo.workOrders || []
+        workOrders: mo.work_orders || []
       });
     }
   }, [mo, isNew, form]);
@@ -94,13 +110,21 @@ export default function ManufacturingForm({ mode }) {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      if (isNew) return (await api.post(E.mo(), data)).data;
-      return (await api.put(E.moOne(id), data)).data;
+      const payload = {
+        product_id: data.finishedProduct,
+        bom_id: data.billOfMaterials,
+        qty: data.quantityToProduce,
+        assignee_id: data.responsiblePerson || null,
+        schedule_date: data.scheduledDate || null
+      };
+      if (isNew) return (await api.post(E.mo(), payload)).data;
+      return (await api.put(E.moOne(id), payload)).data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['manufacturing']);
       toast.success(isNew ? 'Draft created' : 'Saved');
-      if (isNew) navigate(`/manufacturing/${data._id || data.id}`, { replace: true });
+      const moId = data.manufacturing_order?.id || data.id;
+      if (isNew && moId) navigate(`/manufacturing/${moId}`, { replace: true });
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to save')
   });
@@ -159,7 +183,7 @@ export default function ManufacturingForm({ mode }) {
 
   if (!isNew && isLoading) return <div className="p-8 text-steel">Loading...</div>;
 
-  const qtyProducedText = `${mo?.quantityToProduce || 0} ${mo?.finishedProduct?.name || ''}`;
+  const qtyProducedText = `${mo?.qty || 0} ${mo?.product_name || ''}`;
 
   return (
     <div className="h-full flex flex-col gap-6">
@@ -172,9 +196,9 @@ export default function ManufacturingForm({ mode }) {
 
       <FormShell>
         <FormShell.Header 
-          title={isNew ? 'New manufacturing order' : `Manufacturing order ${mo?.moNumber}`}
-          subtitle={isNew ? 'Draft' : mo?.finishedProduct?.name}
-          reference={isNew ? '—' : mo?.moNumber}
+          title={isNew ? 'New manufacturing order' : `Manufacturing order ${mo?.mo_number}`}
+          subtitle={isNew ? 'Draft' : mo?.product_name}
+          reference={isNew ? '—' : mo?.mo_number}
           status={isNew ? 'draft' : mo?.status}
         />
         
@@ -235,17 +259,20 @@ export default function ManufacturingForm({ mode }) {
                 <tbody>
                   {compFields.map((f, i) => {
                     const comp = mo?.components?.[i] || f;
-                    const prodId = comp.product?._id || comp.product;
-                    const prod = products?.find(p => p._id === prodId);
+                    const prodId = comp.component_id || comp.product?._id || comp.product;
+                    const prod = products?.find(p => p.id === prodId || p._id === prodId);
+                    const prodName = comp.component_name || prod?.name || 'Unknown';
                     
-                    const freeToUse = prod?.freeToUseQty || 0;
-                    const available = freeToUse >= comp.toConsumeQuantity;
+                    const freeToUse = comp.free_to_use_qty || prod?.freeToUseQty || 0;
+                    const toConsume = comp.qty_required || comp.toConsumeQuantity || 0;
+                    const consumed = comp.qty_consumed || comp.consumedQuantity || 0;
+                    const available = freeToUse >= toConsume;
 
                     return (
                       <tr key={f.id} className="border-b-[0.5px] border-rule">
-                        <td className="px-3 py-2 text-[13px]">{prod?.name || 'Unknown'}</td>
-                        <td className="px-3 py-2 font-mono text-right">{comp.toConsumeQuantity}</td>
-                        <td className="px-3 py-2 font-mono text-right">{comp.consumedQuantity || 0}</td>
+                        <td className="px-3 py-2 text-[13px]">{prodName}</td>
+                        <td className="px-3 py-2 font-mono text-right">{toConsume}</td>
+                        <td className="px-3 py-2 font-mono text-right">{consumed}</td>
                         <td className="px-3 py-2 text-right">
                           <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${available ? 'bg-successBg text-success' : 'bg-dangerBg text-danger'}`}>
                             {available ? 'Available' : 'Not available'}
@@ -278,17 +305,18 @@ export default function ManufacturingForm({ mode }) {
                 </thead>
                 <tbody>
                   {woFields.map((f, i) => {
-                    const wo = mo?.workOrders?.[i] || f;
+                    const wo = mo?.work_orders?.[i] || f;
                     
-                    const expH = Math.floor((wo.duration||0) / 60).toString().padStart(2, '0');
-                    const expM = ((wo.duration||0) % 60).toString().padStart(2, '0');
+                    const dur = wo.duration_mins || wo.duration || 0;
+                    const expH = Math.floor(dur / 60).toString().padStart(2, '0');
+                    const expM = (dur % 60).toString().padStart(2, '0');
                     const expectedStr = `${expH}:${expM}`;
 
                     return (
                       <tr key={f.id} className="border-b-[0.5px] border-rule">
                         <td className="px-3 py-2 font-mono">{i + 1}</td>
-                        <td className="px-3 py-2">{wo.operation}</td>
-                        <td className="px-3 py-2">{wo.workCenter}</td>
+                        <td className="px-3 py-2">{wo.operation_name || wo.operation}</td>
+                        <td className="px-3 py-2">{wo.work_center_name || wo.workCenter}</td>
                         <td className="px-3 py-2 font-mono text-right">{expectedStr}</td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-3 justify-between">
@@ -296,7 +324,7 @@ export default function ManufacturingForm({ mode }) {
                             {!isNew && (
                               <WorkOrderTimer 
                                 workOrder={wo} 
-                                onAction={(action) => woMutation.mutate({ woId: wo._id, action })} 
+                                onAction={(action) => woMutation.mutate({ woId: wo.id || wo._id, action })} 
                               />
                             )}
                           </div>
@@ -368,9 +396,6 @@ export default function ManufacturingForm({ mode }) {
 
           {isDone && (
             <div className="flex flex-col gap-2">
-              <a href={`${import.meta.env.VITE_API_BASE || 'http://localhost:5000/api'}${E.moPdf(id)}`} target="_blank" rel="noreferrer" className="text-ink hover:underline text-[13px] inline-flex items-center gap-1 font-medium">
-                Download MO worksheet ↗
-              </a>
               {mo?.passport && (
                 <a href={`/passports/${mo.passport}`} className="text-ink hover:underline text-[13px] inline-flex items-center gap-1 font-medium">
                   View passport ↗
@@ -382,6 +407,14 @@ export default function ManufacturingForm({ mode }) {
           {isCancelled && (
             <div className="text-danger text-[13px]">
               Manufacturing was cancelled.
+            </div>
+          )}
+
+          {!isNew && !isDraft && (
+            <div className="card p-4 mt-2 bg-paper2">
+              <a href={`${import.meta.env.VITE_API_BASE || 'http://localhost:5000/api'}${E.moPdf(id)}`} target="_blank" rel="noreferrer" className="text-ink hover:underline text-[13px] inline-flex items-center gap-1 font-medium mb-1">
+                Download MO worksheet ↗
+              </a>
             </div>
           )}
 

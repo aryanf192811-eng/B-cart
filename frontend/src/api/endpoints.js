@@ -10,10 +10,13 @@ export const E = {
   user: (id) => `/users/${id}`,
   userMe: () => '/users/me',
   userAccess: (id) => `/users/${id}/access`,
+  avatarUpload: () => '/users/me/avatar',
   // Master data
+  categories: () => '/categories',
   products: () => '/products',
   product: (id) => `/products/${id}`,
   productBreakdown: (id) => `/products/${id}/inventory-breakdown`,
+  productImage: (id) => `/products/${id}/image`,
   vendors: () => '/vendors',
   vendor: (id) => `/vendors/${id}`,
   vendorPerformance: (id) => `/vendors/${id}/performance`,

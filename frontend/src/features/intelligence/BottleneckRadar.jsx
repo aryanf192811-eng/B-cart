@@ -15,33 +15,33 @@ export default function BottleneckRadar() {
       <Toolbar title="Bottleneck Radar" count={bottlenecks?.length || 0} />
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {(bottlenecks || []).map((b, i) => {
-          const utilColor = b.utilizationPercentage > 80 ? 'bg-rust' : b.utilizationPercentage > 60 ? 'bg-warn' : 'bg-success';
+        {(bottlenecks?.rows || []).map((b, i) => {
+          const utilColor = b.utilization_pct > 80 ? 'bg-rust' : b.utilization_pct > 60 ? 'bg-warn' : 'bg-success';
           return (
             <div key={i} className="card p-5 flex flex-col gap-4">
               <div className="flex justify-between items-center">
-                <div className="font-mono font-bold text-ink">{b.workCenterName}</div>
+                <div className="font-mono font-bold text-ink">{b.name}</div>
               </div>
               
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-2 bg-paper2 rounded-full overflow-hidden">
-                  <div className={`h-full ${utilColor}`} style={{ width: `${b.utilizationPercentage}%` }}></div>
+                  <div className={`h-full ${utilColor}`} style={{ width: `${b.utilization_pct}%` }}></div>
                 </div>
-                <div className="font-mono text-sm text-steel w-12 text-right">{b.utilizationPercentage}%</div>
+                <div className="font-mono text-sm text-steel w-12 text-right">{b.utilization_pct}%</div>
               </div>
               
               <div className="grid grid-cols-3 gap-2 mt-2">
                 <div className="flex flex-col">
                   <span className="text-[11px] text-steel uppercase tracking-wider">Pending</span>
-                  <span className="font-mono text-ink text-lg">{b.pendingWorkOrders}</span>
+                  <span className="font-mono text-ink text-lg">{b.pending_orders}</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[11px] text-steel uppercase tracking-wider">Active</span>
-                  <span className="font-mono text-ink text-lg">{b.activeWorkOrders}</span>
+                  <span className="font-mono text-ink text-lg">{b.active_orders}</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[11px] text-steel uppercase tracking-wider">Queued (mins)</span>
-                  <span className="font-mono text-ink text-lg">{b.queuedMinutes}</span>
+                  <span className="font-mono text-ink text-lg">{b.queued_minutes}</span>
                 </div>
               </div>
 

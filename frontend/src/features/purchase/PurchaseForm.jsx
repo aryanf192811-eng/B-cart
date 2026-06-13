@@ -19,7 +19,7 @@ import { MoneyInput as MInput } from '../../components/MoneyInput';
 import { QtyInput as QInput } from '../../components/QtyInput';
 
 const purchaseSchema = z.object({
-  vendorName: z.string().min(1, 'Required'),
+  vendor_id: z.string().min(1, 'Required').or(z.number()),
   vendorAddress: z.string().optional(),
   responsiblePerson: z.string().optional().nullable(),
   expectedDelivery: z.string().min(1, 'Required'),
@@ -41,13 +41,24 @@ export default function PurchaseForm({ mode }) {
   const [receiveDrawerOpen, setReceiveDrawerOpen] = useState(false);
   const [receiveQuantities, setReceiveQuantities] = useState({});
 
-  const { data: users } = useQuery({ queryKey: ['users'], queryFn: async () => (await api.get(E.users())).data });
-  const { data: products } = useQuery({ queryKey: ['products'], queryFn: async () => (await api.get(E.products())).data });
-  const { data: vendors } = useQuery({ queryKey: ['vendors'], queryFn: async () => (await api.get(E.vendors())).data });
-
+  const { data: users } = useQuery({ queryKey: ['users'], queryFn: async () => {
+    const d = await api.get(E.users());
+    return d.data.users || d.data;
+  }});
+  const { data: products } = useQuery({ queryKey: ['products'], queryFn: async () => {
+    const d = await api.get(E.products());
+    return d.data.rows || d.data;
+  }});
+  const { data: vendors } = useQuery({ queryKey: ['vendors'], queryFn: async () => {
+    const d = await api.get(E.vendors());
+    return d.data.rows || d.data;
+  }});
   const { data: po, isLoading, refetch } = useQuery({
     queryKey: ['purchase', id],
-    queryFn: async () => (await api.get(E.purchaseOne(id))).data,
+    queryFn: async () => {
+      const res = await api.get(E.purchaseOne(id));
+      return res.data.purchase_order || res.data;
+    },
     enabled: !isNew
   });
 
@@ -67,29 +78,39 @@ export default function PurchaseForm({ mode }) {
   useEffect(() => {
     if (!isNew && po) {
       form.reset({
-        vendorName: po.vendorName,
+        vendor_id: po.vendor_id || '',
         vendorAddress: po.vendorAddress || '',
-        responsiblePerson: po.responsiblePerson?._id || po.responsiblePerson || '',
-        expectedDelivery: po.expectedDelivery ? format(new Date(po.expectedDelivery), 'yyyy-MM-dd') : '',
-        items: po.items.map(i => ({
-          product: i.product?._id || i.product,
-          orderedQuantity: i.orderedQuantity,
-          costPrice: i.costPrice
-        }))
+        responsiblePerson: po.responsible_id || '',
+        expectedDelivery: po.expected_delivery_date ? format(new Date(po.expected_delivery_date), 'yyyy-MM-dd') : '',
+        items: po.lines?.map(i => ({
+          product: i.product_id,
+          orderedQuantity: i.qty_ordered,
+          costPrice: i.unit_price
+        })) || []
       });
     }
   }, [po, isNew, form]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const payload = { ...data, items: data.items.map(i => ({...i, total: i.orderedQuantity * i.costPrice})) };
+      const payload = {
+        vendor_id: data.vendor_id,
+        responsible_id: data.responsiblePerson || null,
+        expected_delivery_date: data.expectedDelivery || null,
+        lines: data.items.map(i => ({
+          product_id: i.product,
+          qty_ordered: i.orderedQuantity,
+          unit_price: i.costPrice
+        }))
+      };
       if (isNew) return (await api.post(E.purchase(), payload)).data;
       return (await api.put(E.purchaseOne(id), payload)).data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['purchase']);
       toast.success(isNew ? 'Draft created' : 'Saved');
-      if (isNew) navigate(`/purchase/${data._id || data.id}`, { replace: true });
+      const poId = data.purchase_order?.id || data.id;
+      if (isNew && poId) navigate(`/purchase/${poId}`, { replace: true });
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to save')
   });
@@ -162,9 +183,9 @@ export default function PurchaseForm({ mode }) {
     <div className="h-full">
       <FormShell>
         <FormShell.Header 
-          title={isNew ? 'New purchase order' : `Purchase order ${po?.poNumber}`}
-          subtitle={isNew ? 'Draft' : po?.vendorName}
-          reference={isNew ? '—' : po?.poNumber}
+          title={isNew ? 'New purchase order' : `Purchase order ${po?.po_number}`}
+          subtitle={isNew ? 'Draft' : po?.vendor_name}
+          reference={isNew ? '—' : po?.po_number}
           status={isNew ? 'draft' : po?.status}
         />
         
@@ -183,9 +204,11 @@ export default function PurchaseForm({ mode }) {
         <FormShell.Body>
           <div className="card p-6">
             <FieldGrid>
-              <FieldRow label="Vendor" required error={form.formState.errors.vendorName?.message}>
-                {/* Mirroring select logic but using string for input as fallback if no vendor api */}
-                <input {...form.register('vendorName')} className="field" disabled={!isDraft} placeholder="Enter vendor name..." />
+              <FieldRow label="Vendor" required error={form.formState.errors.vendor_id?.message}>
+                <select {...form.register('vendor_id')} className="field" disabled={!isDraft}>
+                  <option value="">Select vendor...</option>
+                  {vendors?.map?.(v => <option key={v.id || v._id} value={v.id || v._id}>{v.name}</option>)}
+                </select>
               </FieldRow>
               <FieldRow label="Vendor Address">
                 <input {...form.register('vendorAddress')} className="field" disabled={!isDraft} />
@@ -216,19 +239,27 @@ export default function PurchaseForm({ mode }) {
                 </tr>
               </thead>
               <tbody>
-                {fields.map((f, i) => {
-                  const ordered = form.watch(`items.${i}.orderedQuantity`) || 0;
-                  const price = form.watch(`items.${i}.costPrice`) || 0;
-                  const origItem = po?.items?.[i];
-                  const received = origItem?.receivedQuantity || 0;
-                  const rejected = origItem?.rejectedQuantity || 0;
+                {(() => {
+                  const itemsWatched = (() => {
+                    try {
+                      return form.watch('items');
+                    } catch(e) {
+                      return [];
+                    }
+                  })();
+                  return fields.map((f, i) => {
+                    const ordered = itemsWatched?.[i]?.orderedQuantity || 0;
+                    const price = itemsWatched?.[i]?.costPrice || 0;
+                    const origItem = po?.lines?.[i];
+                    const received = origItem?.qty_received || 0;
+                    const rejected = origItem?.rejected_qty || 0;
 
                   return (
                     <tr key={f.id} className="border-b-[0.5px] border-rule">
                       <td className="px-3 py-2">
                         <select {...form.register(`items.${i}.product`)} className="field w-full" disabled={!isDraft}>
                           <option value="">Select product...</option>
-                          {products?.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                          {products?.map?.(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
                         </select>
                       </td>
                       <td className="px-3 py-2">
@@ -253,7 +284,8 @@ export default function PurchaseForm({ mode }) {
                       )}
                     </tr>
                   );
-                })}
+                });
+              })()}
               </tbody>
             </table>
             {isDraft && (
@@ -304,9 +336,6 @@ export default function PurchaseForm({ mode }) {
 
           {isReceived && (
             <div className="flex flex-col gap-2">
-              <a href={`${import.meta.env.VITE_API_BASE || 'http://localhost:5000/api'}${E.purchasePdf(id)}`} target="_blank" rel="noreferrer" className="text-ink hover:underline text-[13px] inline-flex items-center gap-1 font-medium">
-                Download PO ↗
-              </a>
               {isUnpaid && (
                 <button className="btn justify-center mt-2" onClick={handlePay}>
                   Pay with Razorpay
@@ -318,6 +347,14 @@ export default function PurchaseForm({ mode }) {
           {isCancelled && (
             <div className="text-danger text-[13px]">
               Order was cancelled.
+            </div>
+          )}
+
+          {!isNew && !isDraft && (
+            <div className="card p-4 mt-2 bg-paper2">
+              <a href={`${import.meta.env.VITE_API_BASE || 'http://localhost:5000/api'}${E.purchasePdf(id)}`} target="_blank" rel="noreferrer" className="text-ink hover:underline text-[13px] inline-flex items-center gap-1 font-medium mb-1">
+                Download PDF ↗
+              </a>
             </div>
           )}
 
@@ -365,20 +402,23 @@ export default function PurchaseForm({ mode }) {
           <>
             <button className="btn btn-ghost" onClick={() => setReceiveDrawerOpen(false)}>Cancel</button>
             <button className="btn btn-rust" onClick={() => {
-              const lines = Object.entries(receiveQuantities).map(([itemId, vals]) => ({
-                id: itemId,
-                qty_received: (po.items.find(i => i._id === itemId)?.receivedQuantity || 0) + (vals.qty || 0),
-                qty_rejected: (po.items.find(i => i._id === itemId)?.rejectedQuantity || 0) + (vals.rej || 0),
-              })).filter(l => l.qty_received > 0 || l.qty_rejected > 0);
+              const lines = Object.entries(receiveQuantities).map(([itemId, vals]) => {
+                const lineId = po.lines.find(i => i.product_id == itemId || i.id == itemId)?.id;
+                return {
+                  id: lineId,
+                  qty_received: (po.lines.find(i => i.id == lineId)?.qty_received || 0) + (vals.qty || 0),
+                  rejected_qty: (po.lines.find(i => i.id == lineId)?.rejected_qty || 0) + (vals.rej || 0),
+                };
+              }).filter(l => l.qty_received > 0 || l.rejected_qty > 0);
               actionMutation.mutate({ action: 'receive', payload: { lines } });
             }}>Submit receipt</button>
           </>
         }
       >
         <div className="space-y-4">
-          {po?.items?.map(item => {
-            const prod = products?.find(p => p._id === item.product);
-            const remaining = item.orderedQuantity - (item.receivedQuantity || 0) - (item.rejectedQuantity || 0);
+          {po?.lines?.map(item => {
+            const prod = products?.find?.(p => p.id == item.product_id || p._id == item.product_id);
+            const remaining = item.qty_ordered - (item.qty_received || 0) - (item.rejected_qty || 0);
             if (remaining <= 0) return null;
 
             return (
@@ -393,17 +433,17 @@ export default function PurchaseForm({ mode }) {
                     <QInput 
                       max={remaining}
                       min={0}
-                      value={receiveQuantities[item._id]?.qty || 0}
-                      onChange={(e) => setReceiveQuantities(p => ({...p, [item._id]: {...p[item._id], qty: Number(e.target.value)}}))}
+                      value={receiveQuantities[item.id]?.qty || 0}
+                      onChange={(e) => setReceiveQuantities(p => ({...p, [item.id]: {...p[item.id], qty: Number(e.target.value)}}))}
                     />
                   </div>
                   <div className="flex-1">
                     <div className="text-[11px] text-steel mb-1">Rejected quantity</div>
                     <QInput 
-                      max={remaining - (receiveQuantities[item._id]?.qty || 0)}
+                      max={remaining - (receiveQuantities[item.id]?.qty || 0)}
                       min={0}
-                      value={receiveQuantities[item._id]?.rej || 0}
-                      onChange={(e) => setReceiveQuantities(p => ({...p, [item._id]: {...p[item._id], rej: Number(e.target.value)}}))}
+                      value={receiveQuantities[item.id]?.rej || 0}
+                      onChange={(e) => setReceiveQuantities(p => ({...p, [item.id]: {...p[item.id], rej: Number(e.target.value)}}))}
                     />
                   </div>
                 </div>

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import { E } from '../../api/endpoints';
 import { Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import Toolbar from '../../components/Toolbar';
 
@@ -10,10 +9,10 @@ export default function VendorScores() {
     queryFn: async () => (await api.get('/intelligence/vendor-scores')).data
   });
 
-  const chartData = (vendors || []).map(v => ({
-    name: v.vendorName,
-    score: v.qualityScore,
-    fill: v.qualityScore >= 85 ? '#067647' : v.qualityScore >= 70 ? '#DC6803' : '#B42318' // success, warn, danger hex
+  const chartData = (vendors?.rows || []).map(v => ({
+    name: v.name,
+    score: v.reliability_score,
+    fill: v.reliability_score >= 85 ? '#067647' : v.reliability_score >= 70 ? '#DC6803' : '#B42318' // success, warn, danger hex
   })).sort((a,b) => b.score - a.score);
 
   return (
@@ -52,17 +51,17 @@ export default function VendorScores() {
             </tr>
           </thead>
           <tbody>
-            {(vendors || []).sort((a,b) => b.qualityScore - a.qualityScore).map((v, i) => {
-              const color = v.qualityScore >= 85 ? 'border-success' : v.qualityScore >= 70 ? 'border-warn' : 'border-danger';
+            {(vendors?.rows || []).sort((a,b) => b.reliability_score - a.reliability_score).map((v, i) => {
+              const color = v.reliability_score >= 85 ? 'border-success' : v.reliability_score >= 70 ? 'border-warn' : 'border-danger';
               return (
-                <tr key={v.vendorId} className={`border-b-[0.5px] border-rule border-l-2 ${color}`}>
+                <tr key={v.vendor_id} className={`border-b-[0.5px] border-rule border-l-2 ${color}`}>
                   <td className="px-4 py-3 font-mono">{i + 1}</td>
-                  <td className="px-4 py-3 font-medium text-ink">{v.vendorName}</td>
-                  <td className="px-4 py-3 font-mono text-right">{v.totalOrders}</td>
-                  <td className="px-4 py-3 font-mono text-right">{v.onTimePercentage}%</td>
-                  <td className="px-4 py-3 font-mono text-right">{v.fulfillmentPercentage}%</td>
-                  <td className="px-4 py-3 font-mono text-right">{v.qualityScore}%</td>
-                  <td className="px-4 py-3 font-mono text-right font-bold text-ink">{v.qualityScore}</td>
+                  <td className="px-4 py-3 font-medium text-ink">{v.name}</td>
+                  <td className="px-4 py-3 font-mono text-right">{v.total_orders}</td>
+                  <td className="px-4 py-3 font-mono text-right">{Math.round(v.on_time_percentage)}%</td>
+                  <td className="px-4 py-3 font-mono text-right">{Math.round(v.fulfillment_percentage)}%</td>
+                  <td className="px-4 py-3 font-mono text-right">{Math.round(v.reliability_score)}%</td>
+                  <td className="px-4 py-3 font-mono text-right font-bold text-ink">{Math.round(v.reliability_score)}</td>
                 </tr>
               );
             })}

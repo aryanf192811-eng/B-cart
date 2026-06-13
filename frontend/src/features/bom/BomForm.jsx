@@ -18,8 +18,14 @@ export default function BomForm({ mode }) {
   
   const [activeTab, setActiveTab] = useState('components');
 
-  const { data: products } = useQuery({ queryKey: ['products'], queryFn: async () => (await api.get(E.products())).data });
-  const { data: workCenters } = useQuery({ queryKey: ['workCenters'], queryFn: async () => (await api.get(E.workCenters())).data });
+  const { data: products } = useQuery({ queryKey: ['products'], queryFn: async () => {
+    const d = await api.get(E.products());
+    return d.data.rows || d.data;
+  }});
+  const { data: workCenters } = useQuery({ queryKey: ['workCenters'], queryFn: async () => {
+    const d = await api.get(E.workCenters());
+    return d.data.rows || d.data;
+  }});
 
   const { data: bom, isLoading } = useQuery({
     queryKey: ['bom', id],
@@ -28,20 +34,25 @@ export default function BomForm({ mode }) {
   });
 
   const form = useForm({
-    defaultValues: { reference: '', finishedProduct: '', quantity: 1, components: [], workOrders: [] }
+    defaultValues: { reference: '', product_id: '', qty_produced: 1, components: [], operations: [] }
   });
 
   const { fields: compFields, append: appendComp, remove: removeComp } = useFieldArray({ control: form.control, name: 'components' });
-  const { fields: woFields, append: appendWo, remove: removeWo } = useFieldArray({ control: form.control, name: 'workOrders' });
+  const { fields: woFields, append: appendWo, remove: removeWo } = useFieldArray({ control: form.control, name: 'operations' });
 
   useEffect(() => {
     if (!isNew && bom) {
       form.reset({
         reference: bom.reference || '',
-        finishedProduct: bom.finishedProduct?._id || bom.finishedProduct || '',
-        quantity: bom.quantity || 1,
-        components: bom.components || [],
-        workOrders: bom.workOrders || []
+        product_id: bom.product_id || '',
+        qty_produced: bom.qty_produced || 1,
+        components: bom.components?.map(c => ({ component_id: c.component_id, qty: c.qty })) || [],
+        operations: bom.operations?.map(o => ({
+          sequence: o.sequence,
+          name: o.name,
+          work_center_id: o.work_center_id,
+          duration_mins: o.duration_mins
+        })) || []
       });
     }
   }, [bom, isNew, form]);
@@ -83,13 +94,13 @@ export default function BomForm({ mode }) {
                 <input {...form.register('reference')} className="field" />
               </FieldRow>
               <FieldRow label="Finished Product">
-                <select {...form.register('finishedProduct')} className="field">
+                <select {...form.register('product_id')} className="field">
                   <option value="">Select product...</option>
-                  {products?.filter(p => p.procurementMethod === 'Manufacturing').map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                  {products?.filter(p => p.procurement_type === 'manufacturing' || p.procurementMethod === 'Manufacturing').map(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
                 </select>
               </FieldRow>
               <FieldRow label="Quantity Produced">
-                <QtyInput {...form.register('quantity', { valueAsNumber: true })} min={1} />
+                <QtyInput {...form.register('qty_produced', { valueAsNumber: true })} min={1} />
               </FieldRow>
             </FieldGrid>
           </div>
@@ -108,13 +119,13 @@ export default function BomForm({ mode }) {
                   {compFields.map((f, i) => (
                     <tr key={f.id} className="border-b-[0.5px] border-rule">
                       <td className="px-3 py-2">
-                        <select {...form.register(`components.${i}.product`)} className="field w-full">
+                        <select {...form.register(`components.${i}.component_id`)} className="field w-full">
                           <option value="">Select component...</option>
-                          {products?.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                          {products?.map(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
                         </select>
                       </td>
                       <td className="px-3 py-2">
-                        <QtyInput {...form.register(`components.${i}.quantity`, { valueAsNumber: true })} />
+                        <QtyInput {...form.register(`components.${i}.qty`, { valueAsNumber: true })} />
                       </td>
                       <td className="px-3 py-2 text-center">
                         <button type="button" onClick={() => removeComp(i)} className="text-danger hover:text-danger/80">×</button>
@@ -124,7 +135,7 @@ export default function BomForm({ mode }) {
                 </tbody>
               </table>
               <div className="p-3 border-b-[0.5px] border-rule">
-                <button type="button" onClick={() => appendComp({ product: '', quantity: 1 })} className="text-rust text-[13px] hover:underline">
+                <button type="button" onClick={() => appendComp({ component_id: '', qty: 1 })} className="text-rust text-[13px] hover:underline">
                   + Add a component
                 </button>
               </div>
@@ -146,20 +157,21 @@ export default function BomForm({ mode }) {
                 <tbody>
                   {woFields.map((f, i) => (
                     <tr key={f.id} className="border-b-[0.5px] border-rule">
-                      <td className="px-3 py-2 font-mono text-steel">{i + 1}</td>
-                      <td className="px-3 py-2">
-                        <input {...form.register(`workOrders.${i}.operation`)} className="field w-full" placeholder="e.g., Assembly" />
+                      <td className="px-3 py-2 font-mono text-steel">
+                        <input {...form.register(`operations.${i}.sequence`, { valueAsNumber: true })} type="number" className="field w-full" placeholder={i + 1} />
                       </td>
                       <td className="px-3 py-2">
-                        <select {...form.register(`workOrders.${i}.workCenter`)} className="field w-full">
+                        <input {...form.register(`operations.${i}.name`)} className="field w-full" placeholder="e.g., Assembly" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <select {...form.register(`operations.${i}.work_center_id`)} className="field w-full">
                           <option value="">Select center...</option>
-                          {workCenters?.map(wc => <option key={wc._id || wc.name} value={wc.name}>{wc.name}</option>)}
-                          {/* Fallback option if wc empty */}
-                          <option value="Assembly Line 1">Assembly Line 1</option>
+                          {workCenters?.rows?.map(wc => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
+                          {workCenters?.map?.(wc => <option key={wc.id || wc._id} value={wc.id || wc._id}>{wc.name}</option>)}
                         </select>
                       </td>
                       <td className="px-3 py-2">
-                        <QtyInput {...form.register(`workOrders.${i}.duration`, { valueAsNumber: true })} />
+                        <QtyInput {...form.register(`operations.${i}.duration_mins`, { valueAsNumber: true })} />
                       </td>
                       <td className="px-3 py-2 text-center">
                         <button type="button" onClick={() => removeWo(i)} className="text-danger hover:text-danger/80">×</button>
@@ -169,7 +181,7 @@ export default function BomForm({ mode }) {
                 </tbody>
               </table>
               <div className="p-3 border-b-[0.5px] border-rule">
-                <button type="button" onClick={() => appendWo({ operation: '', workCenter: '', duration: 60 })} className="text-rust text-[13px] hover:underline">
+                <button type="button" onClick={() => appendWo({ sequence: woFields.length + 1, name: '', work_center_id: '', duration_mins: 60 })} className="text-rust text-[13px] hover:underline">
                   + Add an operation
                 </button>
               </div>

@@ -9,9 +9,26 @@ export const api = axios.create({
 
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    // Mock mode: Never redirect or attempt refresh token loops
-    console.warn('API Error intercepted:', err.message);
+  async (err) => {
+    const original = err.config;
+    if (err.response?.status === 401 && !original._retry) {
+      if (original.url === '/auth/refresh' || original.url.includes('/auth/login')) {
+        return Promise.reject(err);
+      }
+      original._retry = true;
+      if (!refreshing) {
+        refreshing = api.post('/auth/refresh', {}, { _retry: true }).finally(() => { refreshing = null; });
+      }
+      try {
+        await refreshing;
+        return api(original);
+      } catch {
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(err);
+      }
+    }
     return Promise.reject(err);
   }
 );

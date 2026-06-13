@@ -35,7 +35,7 @@ export default function Signup() {
     return () => clearInterval(timer);
   }, []);
   
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       login_id: 'demo_user',
@@ -46,7 +46,6 @@ export default function Signup() {
     }
   });
 
-  const loginIdValue = watch('login_id', '');
 
   const onSubmit = async (data) => {
     try {
@@ -54,7 +53,7 @@ export default function Signup() {
       await signup(data);
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create account');
+      setError(err.response?.data?.error || 'Failed to create account');
     }
   };
 
@@ -95,37 +94,34 @@ export default function Signup() {
             {error && <div className="text-danger text-sm mb-4">{error}</div>}
             
             <div>
-              <label className="field-label flex justify-between">
+              <label htmlFor="login_id" className="field-label flex justify-between">
                 <span>Login ID</span>
-                {loginIdValue.length >= 6 && (
-                  <span className="text-steel2 lowercase">checking...</span>
-                )}
               </label>
-              <input {...register('login_id')} className="field w-full" />
+              <input id="login_id" {...register('login_id')} className="field w-full" />
               {errors.login_id && <p className="field-error">{errors.login_id.message}</p>}
             </div>
 
             <div>
-              <label className="field-label">Email</label>
-              <input {...register('email')} className="field w-full" type="email" />
+              <label htmlFor="email" className="field-label">Email</label>
+              <input id="email" {...register('email')} className="field w-full" type="email" />
               {errors.email && <p className="field-error">{errors.email.message}</p>}
             </div>
 
             <div>
-              <label className="field-label">Full Name</label>
-              <input {...register('full_name')} className="field w-full" />
+              <label htmlFor="full_name" className="field-label">Full Name</label>
+              <input id="full_name" {...register('full_name')} className="field w-full" />
               {errors.full_name && <p className="field-error">{errors.full_name.message}</p>}
             </div>
             
             <div>
-              <label className="field-label">Password</label>
-              <input {...register('password')} type="password" className="field w-full" />
+              <label htmlFor="password" className="field-label">Password</label>
+              <input id="password" {...register('password')} type="password" className="field w-full" />
               {errors.password && <p className="field-error">{errors.password.message}</p>}
             </div>
 
             <div>
-              <label className="field-label">Confirm Password</label>
-              <input {...register('confirm_password')} type="password" className="field w-full" />
+              <label htmlFor="confirm_password" className="field-label">Confirm Password</label>
+              <input id="confirm_password" {...register('confirm_password')} type="password" className="field w-full" />
               {errors.confirm_password && <p className="field-error">{errors.confirm_password.message}</p>}
             </div>
 
