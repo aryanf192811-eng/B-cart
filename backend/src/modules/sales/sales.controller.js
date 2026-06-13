@@ -298,12 +298,23 @@ async function deliver(req, res, next) {
             userId: req.user.id
           });
 
-          // Unreserve since we consumed stock we (presumably) reserved
-          await writeStockMove(client, {
-            productId: line.product_id, moveType: 'UNRESERVE', qty: delta,
-            referenceType: 'SO', referenceId: line.id, referenceNumber: soRow.so_number,
-            userId: req.user.id
-          });
+          const resQuery = await client.query(`
+            SELECT 
+              COALESCE(SUM(CASE WHEN move_type = 'RESERVE' THEN qty ELSE 0 END), 0) -
+              COALESCE(SUM(CASE WHEN move_type = 'UNRESERVE' THEN qty ELSE 0 END), 0) AS currently_reserved
+            FROM stock_ledger 
+            WHERE reference_type = 'SO' AND reference_id = $1
+          `, [line.id]);
+          const currentlyReserved = parseFloat(resQuery.rows[0].currently_reserved);
+          const unreserveQty = Math.min(delta, currentlyReserved);
+
+          if (unreserveQty > 0) {
+            await writeStockMove(client, {
+              productId: line.product_id, moveType: 'UNRESERVE', qty: unreserveQty,
+              referenceType: 'SO', referenceId: line.id, referenceNumber: soRow.so_number,
+              userId: req.user.id
+            });
+          }
 
           await client.query(`UPDATE so_lines SET qty_delivered = $1 WHERE id = $2`, [newDelivered, line.id]);
         }
@@ -346,7 +357,18 @@ async function cancel(req, res, next) {
       if (['confirmed', 'partially_delivered'].includes(soRow.status)) {
         const lines = await client.query('SELECT * FROM so_lines WHERE so_id = $1', [id]);
         for (const line of lines.rows) {
-          const unreserveQty = parseFloat(line.qty_ordered) - parseFloat(line.qty_delivered);
+          const resQuery = await client.query(`
+            SELECT 
+              COALESCE(SUM(CASE WHEN move_type = 'RESERVE' THEN qty ELSE 0 END), 0) -
+              COALESCE(SUM(CASE WHEN move_type = 'UNRESERVE' THEN qty ELSE 0 END), 0) AS currently_reserved
+            FROM stock_ledger 
+            WHERE reference_type = 'SO' AND reference_id = $1
+          `, [line.id]);
+          const currentlyReserved = parseFloat(resQuery.rows[0].currently_reserved);
+
+          const pendingToDeliver = parseFloat(line.qty_ordered) - parseFloat(line.qty_delivered);
+          const unreserveQty = Math.min(pendingToDeliver, currentlyReserved);
+          
           if (unreserveQty > 0) {
             await writeStockMove(client, {
               productId: line.product_id, moveType: 'UNRESERVE', qty: unreserveQty,

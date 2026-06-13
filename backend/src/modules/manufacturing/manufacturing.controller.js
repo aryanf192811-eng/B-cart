@@ -382,6 +382,23 @@ async function produce(req, res, next) {
         userId: req.user.id
       });
 
+      // Auto-reserve for originating SO
+      if (moRow.source_type === 'auto_from_so' && moRow.source_ref) {
+        const soLineRes = await client.query(`
+          SELECT sl.id FROM so_lines sl
+          JOIN sales_orders so ON so.id = sl.so_id
+          WHERE so.so_number = $1 AND sl.product_id = $2 LIMIT 1
+        `, [moRow.source_ref, moRow.product_id]);
+        if (soLineRes.rows.length > 0) {
+          await writeStockMove(client, {
+            productId: moRow.product_id, moveType: 'RESERVE', qty: parseFloat(moRow.qty),
+            referenceType: 'SO', referenceId: soLineRes.rows[0].id, referenceNumber: moRow.source_ref,
+            userId: req.user.id,
+            notes: `Auto-reserved from MO ${moRow.mo_number}`
+          });
+        }
+      }
+
       await client.query(`UPDATE manufacturing_orders SET status = 'done', completed_at = NOW(), updated_at = NOW() WHERE id = $1`, [id]);
 
       // PRODUCT PASSPORT

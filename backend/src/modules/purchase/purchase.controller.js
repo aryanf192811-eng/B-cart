@@ -262,7 +262,7 @@ async function receive(req, res, next) {
     const { lines } = req.body;
 
     const po = await withTransaction(async (client) => {
-      const poRes = await client.query('SELECT status, po_number FROM purchase_orders WHERE id = $1 FOR UPDATE', [id]);
+      const poRes = await client.query('SELECT status, po_number, source_type, source_ref FROM purchase_orders WHERE id = $1 FOR UPDATE', [id]);
       if (poRes.rows.length === 0) {
         const err = new Error('Purchase Order not found'); err.code = 'NOT_FOUND'; err.status = 404; throw err;
       }
@@ -293,6 +293,22 @@ async function receive(req, res, next) {
             referenceType: 'PO', referenceId: line.id, referenceNumber: poRow.po_number,
             userId: req.user.id
           });
+
+          if (poRow.source_type === 'auto_from_so' && poRow.source_ref) {
+            const soLineRes = await client.query(`
+              SELECT sl.id FROM so_lines sl
+              JOIN sales_orders so ON so.id = sl.so_id
+              WHERE so.so_number = $1 AND sl.product_id = $2 LIMIT 1
+            `, [poRow.source_ref, line.product_id]);
+            if (soLineRes.rows.length > 0) {
+              await writeStockMove(client, {
+                productId: line.product_id, moveType: 'RESERVE', qty: acceptedDelta,
+                referenceType: 'SO', referenceId: soLineRes.rows[0].id, referenceNumber: poRow.source_ref,
+                userId: req.user.id,
+                notes: `Auto-reserved from PO ${poRow.po_number}`
+              });
+            }
+          }
         }
 
         await client.query(`UPDATE po_lines SET qty_received = $1, rejected_qty = $2 WHERE id = $3`, [newReceived, newRejected, line.id]);
