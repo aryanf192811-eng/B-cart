@@ -52,6 +52,13 @@ CREATE OR REPLACE VIEW smart_procurement_view AS
 SELECT
   p.id, p.name, p.sku, p.unit,
   p.on_hand_qty,
+  COALESCE(
+    (SELECT SUM(pol.qty_ordered - COALESCE(pol.qty_received, 0)) 
+     FROM po_lines pol
+     JOIN purchase_orders po ON po.id = pol.po_id
+     WHERE pol.product_id = p.id AND po.status NOT IN ('draft', 'fully_received', 'cancelled')
+    ), 0
+  ) AS incoming_qty,
   p.min_stock_qty,
   p.lead_time_days,
   p.default_vendor_id,
@@ -65,7 +72,15 @@ SELECT
     WHEN COALESCE((SELECT SUM(qty) FROM stock_ledger
          WHERE product_id = p.id AND move_type = 'OUT'
          AND created_at >= NOW() - INTERVAL '30 days') / 30.0, 0) > 0
-    THEN p.on_hand_qty / ((SELECT SUM(qty) FROM stock_ledger
+    THEN (p.on_hand_qty + 
+          COALESCE(
+            (SELECT SUM(pol.qty_ordered - COALESCE(pol.qty_received, 0)) 
+             FROM po_lines pol
+             JOIN purchase_orders po ON po.id = pol.po_id
+             WHERE pol.product_id = p.id AND po.status NOT IN ('draft', 'fully_received', 'cancelled')
+            ), 0
+          )
+         ) / ((SELECT SUM(qty) FROM stock_ledger
          WHERE product_id = p.id AND move_type = 'OUT'
          AND created_at >= NOW() - INTERVAL '30 days') / 30.0)
     ELSE NULL
@@ -74,7 +89,16 @@ SELECT
     COALESCE((SELECT SUM(qty) FROM stock_ledger
          WHERE product_id = p.id AND move_type = 'OUT'
          AND created_at >= NOW() - INTERVAL '30 days') / 30.0, 0)
-    * (p.lead_time_days + 7) - p.on_hand_qty
+    * (p.lead_time_days + 7) - 
+    (p.on_hand_qty + 
+          COALESCE(
+            (SELECT SUM(pol.qty_ordered - COALESCE(pol.qty_received, 0)) 
+             FROM po_lines pol
+             JOIN purchase_orders po ON po.id = pol.po_id
+             WHERE pol.product_id = p.id AND po.status NOT IN ('draft', 'fully_received', 'cancelled')
+            ), 0
+          )
+    )
   )) AS recommended_order_qty
 FROM products p
 LEFT JOIN vendors v ON v.id = p.default_vendor_id

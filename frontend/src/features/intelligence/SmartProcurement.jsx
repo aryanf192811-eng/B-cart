@@ -57,7 +57,7 @@ export default function SmartProcurement() {
                 <tr key={i} className="border-b-[0.5px] border-rule">
                   <td className="px-4 py-3 font-medium text-ink">{a.name}</td>
                   <td className="px-4 py-3 font-mono text-right">{a.on_hand_qty}</td>
-                  <td className="px-4 py-3 font-mono text-right">{parseFloat(a.avg_daily_use).toFixed(1)}</td>
+                  <td className="px-4 py-3 font-mono text-right">{parseFloat(a.avg_daily_consumption || 0).toFixed(1)}</td>
                   <td className="px-4 py-3 text-right">
                     <span className={`font-mono px-2 py-0.5 rounded border-[0.5px] ${riskColor}`}>
                       {a.days_remaining !== null ? `${Math.round(a.days_remaining)}d` : '—'}
@@ -68,7 +68,7 @@ export default function SmartProcurement() {
                   <td className="px-4 py-3 text-center">
                     <button 
                       className="btn btn-rust btn-sm"
-                      onClick={() => navigate('/purchase/new')}
+                      onClick={() => navigate('/purchase/new', { state: { vendor_id: a.default_vendor_id, lines: [{ product_id: a.id, qty_ordered: Math.ceil(a.recommended_order_qty), unit_price: 0 }] } })}
                     >
                       Create PO
                     </button>

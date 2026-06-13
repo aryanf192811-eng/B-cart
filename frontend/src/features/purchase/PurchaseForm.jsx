@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -33,9 +33,11 @@ const purchaseSchema = z.object({
 export default function PurchaseForm({ mode }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isNew = mode === 'new';
+  const prefill = location.state || {};
   
   const [activeTab, setActiveTab] = useState('order');
   const [receiveDrawerOpen, setReceiveDrawerOpen] = useState(false);
@@ -70,7 +72,15 @@ export default function PurchaseForm({ mode }) {
 
   const form = useForm({
     resolver: zodResolver(purchaseSchema),
-    defaultValues: { items: [{ product: '', orderedQuantity: 1, costPrice: 0 }], expectedDelivery: '' }
+    defaultValues: { 
+      vendor_id: prefill.vendor_id || '',
+      items: prefill.lines ? prefill.lines.map(l => ({
+        product: l.product_id?.toString() || '',
+        orderedQuantity: l.qty_ordered || 1,
+        costPrice: l.unit_price || 0
+      })) : [{ product: '', orderedQuantity: 1, costPrice: 0 }],
+      expectedDelivery: '' 
+    }
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'items' });
