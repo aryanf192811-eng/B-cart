@@ -12,6 +12,18 @@ import { useSocket } from '../hooks/useSocket';
 import DataTable from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
 
+// Map alert entity_type → frontend route
+function getAlertLink(alert) {
+  const id = alert.entity_id;
+  switch (alert.entity_type) {
+    case 'product':      return `/products/${id}`;
+    case 'work_center':  return `/intelligence/bottlenecks`;
+    case 'sales_order':  return `/sales/${id}`;
+    case 'vendor':       return `/intelligence/vendors`;
+    default:             return `/intelligence/procurement`;
+  }
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -232,8 +244,9 @@ export default function Dashboard() {
                   <div className="text-[12px] text-steel truncate pl-[20px]">
                     {alert.message}
                   </div>
+                  <div className="text-[11px] text-steel2 mt-0.5 pl-[20px]">{alert.action}</div>
                   <div className="text-right mt-1">
-                    <span className="text-[11px] text-ink hover:underline cursor-pointer font-medium" onClick={() => navigate(alert.link || '/control-tower')}>
+                    <span className="text-[11px] text-ink hover:underline cursor-pointer font-medium" onClick={() => navigate(getAlertLink(alert))}>
                       Take action ↗
                     </span>
                   </div>
@@ -242,8 +255,8 @@ export default function Dashboard() {
             )}
           </div>
           <div className="border-t-[0.5px] border-rule p-2">
-            <button className="btn btn-ghost w-full justify-center text-steel hover:text-ink" onClick={() => navigate('/')}>
-              See all alerts
+            <button className="btn btn-ghost w-full justify-center text-steel hover:text-ink" onClick={() => navigate('/intelligence/bottlenecks')}>
+              See all alerts →
             </button>
           </div>
         </div>
