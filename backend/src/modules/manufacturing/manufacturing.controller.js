@@ -113,7 +113,7 @@ async function getById(req, res, next) {
     );
 
     const workOrdersRes = await query(`
-      SELECT wo.*, wc.name AS work_center, wc.capacity_per_hour,
+      SELECT wo.*, wc.name AS work_center_name, wc.code AS work_center_code,
         (SELECT logged_at FROM work_order_time_logs 
          WHERE work_order_id = wo.id AND action IN ('start', 'resume') 
          ORDER BY logged_at DESC LIMIT 1) AS last_resume_at
