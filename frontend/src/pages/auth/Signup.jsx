@@ -76,7 +76,7 @@ export default function Signup() {
 
         <div className="relative z-20">
           <h1 className="font-mono text-4xl text-white tracking-widest font-bold drop-shadow-lg">B-cart</h1>
-          <p className="text-white/90 text-[15px] mt-2 font-medium drop-shadow-md">B-cart · Operations Floor</p>
+          <p className="text-white/90 text-[15px] mt-2 font-medium drop-shadow-md">Mini ERP · Operations Floor</p>
         </div>
         <div className="relative z-20 border-l-4 border-rust pl-5 text-white text-[15px] leading-relaxed font-medium max-w-sm drop-shadow-md">
           Join the floor. Manage inventory, orchestrate manufacturing, and handle procurement.

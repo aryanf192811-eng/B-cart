@@ -20,7 +20,7 @@ import VendorForm from './features/vendors/VendorForm';
 import CustomersList from './features/customers/CustomersList';
 import CustomerForm from './features/customers/CustomerForm';
 import WorkCentersList from './features/work-centers/WorkCentersList';
-import ControlTower from './features/intelligence/ControlTower';
+import Dashboard from './pages/Dashboard';
 import SmartProcurement from './features/intelligence/SmartProcurement';
 import VendorScores from './features/intelligence/VendorScores';
 import BottleneckRadar from './features/intelligence/BottleneckRadar';
@@ -67,7 +67,7 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/control-tower" replace />} />
+        <Route index element={<Dashboard />} />
         
         {/* Sales */}
         <Route path="sales" element={<SalesList />} />
@@ -111,7 +111,6 @@ export default function App() {
         <Route path="work-centers" element={<WorkCentersList />} />
 
         {/* Intelligence */}
-        <Route path="control-tower" element={<ControlTower />} />
         <Route path="intelligence/procurement" element={<SmartProcurement />} />
         <Route path="intelligence/vendors" element={<VendorScores />} />
         <Route path="intelligence/bottlenecks" element={<BottleneckRadar />} />

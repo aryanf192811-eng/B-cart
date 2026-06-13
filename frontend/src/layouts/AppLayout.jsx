@@ -17,8 +17,7 @@ const NAV_CONFIG = [
   {
     label: 'OPERATIONS',
     items: [
-      { name: 'Dashboard', icon: Home, path: '/' },
-      { name: 'Control Tower', icon: Radar, path: '/control-tower' }
+      { name: 'Dashboard', icon: Home, path: '/' }
     ]
   },
   {
@@ -142,22 +141,27 @@ export default function AppLayout() {
       <div className="ml-[220px] flex-1 flex flex-col min-w-0 min-h-screen">
         {/* Topbar */}
         <header className="h-[48px] sticky top-0 bg-rust z-10 flex items-center justify-between px-6 text-white shadow-sm">
-          <div className="text-[15px] font-semibold flex items-center">
+          {/* Left: Title */}
+          <div className="flex-1 min-w-0 text-[15px] font-semibold flex items-center truncate pr-4">
             {currentSection}
           </div>
 
-          <div className="flex-1 max-w-md mx-6 relative">
-            <input 
-              type="text" 
-              placeholder="Search SO, PO, MO, product..." 
-              className="w-full h-8 bg-rust2 border-[0.5px] border-rust2 rounded px-3 text-[13px] text-white placeholder:text-white/70 focus:border-white focus:ring-1 focus:ring-white outline-none transition-all"
-            />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[11px] text-white/80 px-1 border-[0.5px] border-white/20 rounded bg-rust2">
-              ⌘K
+          {/* Center: Search Bar */}
+          <div className="flex-none w-full max-w-[400px] flex justify-center px-4">
+            <div className="w-full relative">
+              <input 
+                type="text" 
+                placeholder="Search SO, PO, MO, product..." 
+                className="w-full h-8 bg-rust2 border-[0.5px] border-rust2 rounded px-3 text-[13px] text-white placeholder:text-white/70 focus:border-white focus:ring-1 focus:ring-white outline-none transition-all"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[11px] text-white/80 px-1 border-[0.5px] border-white/20 rounded bg-rust2">
+                ⌘K
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Right: Actions */}
+          <div className="flex-1 min-w-0 flex items-center justify-end gap-3">
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-rust2">
               <div className={clsx("w-2 h-2 rounded-full", connected ? "bg-[#198754]" : "bg-[#DC3545]")}></div>
               <span className="font-mono text-[10px] tracking-wider text-white font-medium">

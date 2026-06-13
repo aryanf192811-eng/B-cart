@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, FileText, ShoppingCart, Truck, Factory, Activity, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, FileText, ShoppingCart, Truck, Factory, Activity, CheckCircle2, Radar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 
@@ -17,6 +17,12 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { socket } = useSocket();
   const [activeTab, setActiveTab] = useState('sales');
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const int = setInterval(() => setSeconds(s => s + 1), 1000);
+    return () => clearInterval(int);
+  }, []);
 
   const { data: kpiData, refetch: refetchKpis } = useQuery({
     queryKey: ['dashboard-kpis'],
@@ -44,7 +50,7 @@ export default function Dashboard() {
       if (activeTab === 'sales') endpoint = `${E.sales()}?limit=8`;
       if (activeTab === 'purchase') endpoint = `${E.purchase()}?limit=8`;
       if (activeTab === 'manufacturing') endpoint = `${E.mo()}?limit=8`;
-      
+
       const { data } = await api.get(endpoint);
       // Filter out fully done items if backend hasn't
       return data.filter(i => !['fully_delivered', 'fully_received', 'done', 'cancelled'].includes(i.status)).slice(0, 8);
@@ -54,7 +60,7 @@ export default function Dashboard() {
   // Socket listener
   useEffect(() => {
     if (!socket) return;
-    
+
     const handleUpdate = (data) => {
       // Refetch data slightly debounced
       setTimeout(() => {
@@ -100,48 +106,64 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto">
-      {/* ROW 1: Hero strip */}
-      <div>
-        <div className="text-[11px] font-semibold text-steel uppercase tracking-wider mb-2">
-          OPERATIONS · {today}
+      {/* ROW 1: Control Tower Hero Banner */}
+      <div className="relative rounded-xl overflow-hidden bg-ink text-white shadow-lg border border-rule min-h-[220px] flex">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200&auto=format&fit=crop')" }}
+        ></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-rust/95 via-rust/60 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-transparent to-transparent"></div>
+
+        <div className="relative z-10 p-8 md:p-10 flex flex-col md:flex-row gap-8 justify-between items-start md:items-center w-full">
+          <div className="max-w-md">
+            <div className="text-[12px] font-bold text-white/80 uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#198754] animate-pulse"></span>
+              SYSTEM LIVE • {seconds}s AGO
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-2 drop-shadow-sm">
+              Good {timeOfDay}, {user?.name?.split(' ')[0] || 'Admin'}.
+            </h1>
+            <p className="text-[15px] text-white/90 drop-shadow-sm">
+              {alertsCount > 0
+                ? `There are currently ${alertsCount} items demanding your attention across the supply chain.`
+                : 'All automated systems are stable. No active bottlenecks detected.'}
+            </p>
+          </div>
+
+          {/* Glassmorphic Actions */}
+          <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-4 flex flex-col justify-between min-w-[140px]">
+              <div className="text-[12px] font-medium text-white/80 uppercase tracking-wide">Active Alerts</div>
+              <div className="text-[32px] font-bold mt-1 text-white">{alertsCount}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-4 flex flex-col justify-between min-w-[140px]">
+              <div className="text-[12px] font-medium text-white/80 uppercase tracking-wide">System Status</div>
+              <div className="text-[16px] font-bold mt-3 text-success">Optimal</div>
+            </div>
+          </div>
         </div>
-        <h1 className="text-[28px] font-bold text-ink leading-tight">
-          Good {timeOfDay}, {user?.name || user?.full_name || 'User'}.
-        </h1>
-        <p className="text-[14px] text-steel mt-2 flex items-center gap-1.5">
-          {alertsCount > 0 ? (
-            <span className="cursor-pointer hover:text-ink transition-colors flex items-center gap-1" onClick={() => navigate('/control-tower')}>
-              <AlertCircle size={14} className="text-warn" />
-              {alertsCount} alerts on the control tower ↗
-            </span>
-          ) : (
-            <span className="flex items-center gap-1">
-              <CheckCircle2 size={14} className="text-success" />
-              Operations are running clean.
-            </span>
-          )}
-        </p>
       </div>
 
       {/* ROW 2: Stat Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/sales')}>
-          <div className="stat-label flex items-center gap-1.5"><ShoppingCart size={12}/> Sales · open</div>
+          <div className="stat-label flex items-center gap-1.5"><ShoppingCart size={12} /> Sales · open</div>
           <div className="stat-value">{openSO}</div>
           <div className="stat-delta">late: {counts.sales.late || 0}</div>
         </div>
         <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/purchase')}>
-          <div className="stat-label flex items-center gap-1.5"><Truck size={12}/> Purchase · open</div>
+          <div className="stat-label flex items-center gap-1.5"><Truck size={12} /> Purchase · open</div>
           <div className="stat-value">{openPO}</div>
           <div className="stat-delta">late: {counts.purchase.late || 0}</div>
         </div>
         <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/manufacturing')}>
-          <div className="stat-label flex items-center gap-1.5"><Factory size={12}/> Manufacturing · active</div>
+          <div className="stat-label flex items-center gap-1.5"><Factory size={12} /> Manufacturing · active</div>
           <div className="stat-value">{activeMO}</div>
           <div className="stat-delta">blocked: {counts.manufacturing.blocked || 0}</div>
         </div>
         <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/products?low_stock=true')}>
-          <div className="stat-label flex items-center gap-1.5"><Activity size={12}/> Inventory · low stock</div>
+          <div className="stat-label flex items-center gap-1.5"><Activity size={12} /> Inventory · low stock</div>
           <div className="stat-value text-danger">{lowStock}</div>
           <div className="stat-delta">needs attention</div>
         </div>
@@ -160,8 +182,8 @@ export default function Dashboard() {
               { id: 'purchase', label: 'Purchase' },
               { id: 'manufacturing', label: 'Manufacturing' }
             ].map(t => (
-              <div 
-                key={t.id} 
+              <div
+                key={t.id}
                 className={`tab ${activeTab === t.id ? 'tab-active' : ''}`}
                 onClick={() => setActiveTab(t.id)}
               >
@@ -221,7 +243,7 @@ export default function Dashboard() {
             )}
           </div>
           <div className="border-t-[0.5px] border-rule p-2">
-            <button className="btn btn-ghost w-full justify-center text-steel hover:text-ink" onClick={() => navigate('/control-tower')}>
+            <button className="btn btn-ghost w-full justify-center text-steel hover:text-ink" onClick={() => navigate('/')}>
               See all alerts
             </button>
           </div>

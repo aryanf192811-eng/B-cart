@@ -10,6 +10,7 @@ import FormShell from '../../components/FormShell';
 import { FieldRow, FieldGrid } from '../../components/FieldRow';
 import { MoneyInput } from '../../components/MoneyInput';
 import { QtyInput } from '../../components/QtyInput';
+import { Upload } from 'lucide-react';
 
 export default function ProductForm({ mode }) {
   const { id } = useParams();
@@ -30,7 +31,7 @@ export default function ProductForm({ mode }) {
   });
 
   const form = useForm({
-    defaultValues: { sku: '', name: '', category: '', unitOfMeasure: 'Units', salesPrice: 0, costPrice: 0, onHandQty: 0, minStockQty: 0, leadTimeDays: 0, procureOnDemand: false, procurementMethod: 'Purchase' }
+    defaultValues: { sku: '', name: '', category: '', imageUrl: '', unitOfMeasure: 'Units', salesPrice: 0, costPrice: 0, onHandQty: 0, minStockQty: 0, leadTimeDays: 0, procureOnDemand: false, procurementMethod: 'Purchase' }
   });
 
   const procureOnDemand = form.watch('procureOnDemand');
@@ -40,6 +41,17 @@ export default function ProductForm({ mode }) {
       form.reset(prod);
     }
   }, [prod, isNew, form]);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue('imageUrl', reader.result, { shouldDirty: true });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
@@ -78,6 +90,25 @@ export default function ProductForm({ mode }) {
               </FieldRow>
               <FieldRow label="Category">
                 <input {...form.register('category')} className="field" />
+              </FieldRow>
+              <FieldRow label="Image">
+                <div className="flex gap-3 items-center w-full">
+                  <div className="relative flex-1 flex items-center">
+                    <input {...form.register('imageUrl')} className="field w-full pr-10" placeholder="Paste URL or upload..." />
+                    <label className="absolute right-2 cursor-pointer text-steel hover:text-rust transition-colors">
+                      <Upload size={16} />
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                    </label>
+                  </div>
+                  {form.watch('imageUrl') && (
+                    <img 
+                      src={form.watch('imageUrl')} 
+                      alt="Preview" 
+                      className="w-8 h-8 rounded object-cover bg-white border-[0.5px] border-rule flex-shrink-0" 
+                      onError={(e) => e.target.style.display='none'} 
+                    />
+                  )}
+                </div>
               </FieldRow>
               <FieldRow label="Unit of Measure">
                 <select {...form.register('unitOfMeasure')} className="field">

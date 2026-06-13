@@ -9,20 +9,9 @@ export const api = axios.create({
 
 api.interceptors.response.use(
   (res) => res,
-  async (err) => {
-    const original = err.config;
-    if (err.response?.status === 401 && !original._retry) {
-      original._retry = true;
-      if (!refreshing) {
-        refreshing = api.post('/auth/refresh').finally(() => { refreshing = null; });
-      }
-      try {
-        await refreshing;
-        return api(original);
-      } catch {
-        window.location.href = '/login';
-      }
-    }
+  (err) => {
+    // Mock mode: Never redirect or attempt refresh token loops
+    console.warn('API Error intercepted:', err.message);
     return Promise.reject(err);
   }
 );

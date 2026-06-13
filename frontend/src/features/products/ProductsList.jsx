@@ -15,7 +15,20 @@ export default function ProductsList() {
 
   const columns = [
     { key: 'sku', label: 'SKU', render: (r) => <span className="font-mono">{r.sku}</span> },
-    { key: 'name', label: 'PRODUCT' },
+    { 
+      key: 'name', 
+      label: 'PRODUCT',
+      render: (r) => (
+        <div className="flex items-center gap-3">
+          {r.imageUrl ? (
+            <img src={r.imageUrl} alt={r.name} className="w-8 h-8 rounded object-cover bg-white border-[0.5px] border-rule" />
+          ) : (
+            <div className="w-8 h-8 rounded bg-paper2 border-[0.5px] border-rule flex items-center justify-center text-[10px] text-steel font-medium">No Img</div>
+          )}
+          <span className="font-medium text-ink">{r.name}</span>
+        </div>
+      )
+    },
     { key: 'category', label: 'CATEGORY' },
     { key: 'salesPrice', label: 'SALES PRICE', align: 'right', render: (r) => <span className="font-mono">₹ {(r.salesPrice || 0).toFixed(2)}</span> },
     { key: 'costPrice', label: 'COST PRICE', align: 'right', render: (r) => <span className="font-mono">₹ {(r.costPrice || 0).toFixed(2)}</span> },
