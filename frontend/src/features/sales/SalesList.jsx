@@ -130,7 +130,7 @@ export default function SalesList() {
             {kanbanStages.map(stage => {
               const items = rows.filter(i => i.status === stage);
               return (
-                <div key={stage} className="flex-1 min-w-[240px] flex flex-col gap-3">
+                <div key={stage} className="kanban-column flex-1 min-w-[240px] flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-ink text-sm">{STATUS_LABELS[stage] || stage}</span>
                     <span className="text-xs text-steel font-mono">{items.length}</span>
@@ -140,7 +140,7 @@ export default function SalesList() {
                       <div
                         key={item.id}
                         onClick={() => navigate(`/sales/${item.id}`)}
-                        className="bg-white p-3 border-[0.5px] border-rule rounded-md cursor-pointer hover:border-ink transition-colors"
+                        className="kanban-card cursor-pointer"
                       >
                         <div className="font-mono text-sm text-ink mb-1">{item.so_number}</div>
                         <div className="text-[13px] text-steel truncate mb-2">{item.customer_name}</div>
