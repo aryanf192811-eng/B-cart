@@ -277,8 +277,14 @@ INSERT INTO work_orders (mo_id, work_center_id, operation_name, duration_mins, s
 INSERT INTO audit_logs (user_id, module, action, entity_type, entity_id, entity_ref, field_name, old_value, new_value, created_at) VALUES
   (1, 'System', 'Login', 'User', 1, 'admin', NULL, NULL, 'Success', NOW() - INTERVAL '2 days'),
   (2, 'Sales', 'Created', 'SalesOrder', 1, 'SO-000001', NULL, NULL, 'Created SO', NOW() - INTERVAL '1 days'),
-  (2, 'Sales', 'Updated', 'SalesOrder', 1, 'SO-000001', 'status', 'draft', 'confirmed', NOW() - INTERVAL '1 days'),
-  (4, 'Manufacturing', 'Created', 'ManufacturingOrder', 2, 'MO-000002', NULL, NULL, 'Created MO', NOW() - INTERVAL '20 hours'),
-  (4, 'Manufacturing', 'Updated', 'ManufacturingOrder', 2, 'MO-000002', 'status', 'in_progress', 'done', NOW() - INTERVAL '5 hours'),
-  (1, 'Quality', 'Passed', 'ProductPassport', 1, 'PASS-DT-1002', 'qc_status', 'pending', 'passed', NOW() - INTERVAL '4 hours');
-
+  (2, 'Sales', 'Updated', 'SalesOrder', 1, 'SO-000001', 'status', 'draft', 'confirmed', NOW() - INTERVAL '23 hours'),
+  (2, 'Sales', 'Created', 'SalesOrder', 2, 'SO-000002', NULL, NULL, 'Created SO', NOW() - INTERVAL '20 hours'),
+  (2, 'Sales', 'Updated', 'SalesOrder', 2, 'SO-000002', 'status', 'draft', 'confirmed', NOW() - INTERVAL '19 hours'),
+  (2, 'Sales', 'Updated', 'SalesOrder', 2, 'SO-000002', 'status', 'confirmed', 'delivered', NOW() - INTERVAL '18 hours'),
+  (1, 'Purchase', 'Created', 'PurchaseOrder', 1, 'PO-000001', NULL, NULL, 'Created PO', NOW() - INTERVAL '5 days'),
+  (1, 'Purchase', 'Updated', 'PurchaseOrder', 1, 'PO-000001', 'status', 'draft', 'confirmed', NOW() - INTERVAL '4 days'),
+  (1, 'Purchase', 'Updated', 'PurchaseOrder', 1, 'PO-000001', 'status', 'confirmed', 'received', NOW() - INTERVAL '2 days'),
+  (3, 'Manufacturing', 'Created', 'ManufacturingOrder', 1, 'MO-000001', NULL, NULL, 'Created MO', NOW() - INTERVAL '2 days'),
+  (3, 'Manufacturing', 'Updated', 'ManufacturingOrder', 1, 'MO-000001', 'status', 'draft', 'confirmed', NOW() - INTERVAL '1 days'),
+  (3, 'Manufacturing', 'Updated', 'ManufacturingOrder', 1, 'MO-000001', 'status', 'confirmed', 'in_progress', NOW() - INTERVAL '12 hours'),
+  (3, 'Manufacturing', 'Updated', 'ManufacturingOrder', 1, 'MO-000001', 'status', 'in_progress', 'done', NOW() - INTERVAL '10 hours');

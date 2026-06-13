@@ -13,18 +13,8 @@ try {
 const router = Router();
 router.use(requireAuth);
 
-function generateCsv(ctx) {
-  const lines = ['section,field,value'];
-  for (const prod of (ctx.products || [])) {
-    lines.push(`products,${prod.sku} - ${prod.name},on_hand=${prod.on_hand_qty} free=${prod.free_to_use_qty} min=${prod.min_stock_qty}`);
-  }
-  for (const v of (ctx.topVendors || [])) {
-    lines.push(`vendors,${v.name},score=${v.reliability_score}`);
-  }
-  for (const a of (ctx.alerts || [])) {
-    lines.push(`alerts,${a.alert_type},${a.message}`);
-  }
-  return lines.join('\n');
+function generateJson(ctx) {
+  return JSON.stringify(ctx, null, 2);
 }
 
 async function buildContext() {
@@ -99,11 +89,11 @@ LIVE_CONTEXT: ${JSON.stringify(ctx)}`;
         });
       }
 
-      // CSV fallback
+      // JSON fallback
       const tmpDir = path.join(__dirname, '../../../tmp');
       if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-      const csvPath = path.join(tmpDir, 'erp_snapshot.csv');
-      fs.writeFileSync(csvPath, generateCsv(ctx));
+      const jsonPath = path.join(tmpDir, 'erp_snapshot.json');
+      fs.writeFileSync(jsonPath, generateJson(ctx));
 
       const text = message.toLowerCase();
       let reply;
@@ -116,7 +106,7 @@ LIVE_CONTEXT: ${JSON.stringify(ctx)}`;
       } else if (text.includes('alert') || text.includes('issue')) {
         reply = ctx.alerts.length ? ctx.alerts.map(a => `• [${a.alert_type}] ${a.message}`).join('\n') : 'No active alerts.';
       } else if (text.includes('stock') || text.includes('inventory')) {
-        reply = `Total products: ${ctx.products.length}. Low stock items: ${ctx.lowStock.length}. Snapshot saved to /tmp/erp_snapshot.csv.`;
+        reply = `Total products: ${ctx.products.length}. Low stock items: ${ctx.lowStock.length}. Snapshot saved to /api/chat/snapshot.json.`;
       } else if (text.includes('order') || text.includes('sales')) {
         const soStr = ctx.openSO.map(s => `${s.status}: ${s.cnt}`).join(', ');
         reply = `Sales orders by status — ${soStr}.`;
@@ -124,22 +114,22 @@ LIVE_CONTEXT: ${JSON.stringify(ctx)}`;
         const moStr = ctx.openMO.map(m => `${m.status}: ${m.cnt}`).join(', ');
         reply = `Manufacturing orders by status — ${moStr}.`;
       } else {
-        reply = `I'm running in offline mode (no Groq API key configured). Snapshot CSV available at /api/chat/snapshot.csv. Try asking about low stock, vendors, alerts, orders, or inventory.`;
+        reply = `I'm running in offline mode (no Groq API key configured). Snapshot JSON available at /api/chat/snapshot.json. Try asking about low stock, vendors, alerts, orders, or inventory.`;
       }
 
-      return res.json({ response: reply, source: 'csv_fallback' });
+      return res.json({ response: reply, source: 'json_fallback' });
     } catch (err) { next(err); }
   }
 );
 
-// ── GET /api/chat/snapshot.csv ────────────────────────────────
-router.get('/snapshot.csv', async (req, res, next) => {
+// ── GET /api/chat/snapshot.json ────────────────────────────────
+router.get('/snapshot.json', async (req, res, next) => {
   try {
     const ctx = await buildContext();
-    const csv = generateCsv(ctx);
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="erp_snapshot.csv"');
-    res.send(csv);
+    const jsonStr = generateJson(ctx);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="erp_snapshot.json"');
+    res.send(jsonStr);
   } catch (err) { next(err); }
 });
 
