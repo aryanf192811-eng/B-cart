@@ -19,7 +19,7 @@ export default function PassportDetail() {
   const { data: p, isLoading } = useQuery({
     queryKey: ['passports', id],
     queryFn: async () => {
-      const res = await api.get(E.passportOne(id));
+      const res = await api.get(E.passport(id));
       return res.data.passport || res.data;
     }
   });
