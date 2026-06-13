@@ -31,7 +31,7 @@ app.locals.io = io;
 // ── Start server ────────────────────────────────────────────
 const PORT = env.port;
 server.listen(PORT, () => {
-  logger.info(`ForgeOps backend on :${PORT}`);
+  logger.info(`B-cart backend on :${PORT}`);
 });
 
 module.exports = server;

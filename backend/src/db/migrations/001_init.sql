@@ -1,4 +1,4 @@
--- 001_init.sql — Core schema for ForgeOps Mini ERP
+-- 001_init.sql — Core schema for B-cart
 
 -- 1. roles
 CREATE TABLE IF NOT EXISTS roles (

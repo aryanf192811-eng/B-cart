@@ -73,7 +73,7 @@ router.post('/',
       if (useGemini) {
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-        const systemPrompt = `You are the assistant for ForgeOps Mini ERP for Shiv Furniture Works. Answer using ONLY the LIVE_CONTEXT below. If asked a question that needs data not in context, say so. Be concise, use ₹ for prices, never invent SKUs or numbers.
+        const systemPrompt = `You are the assistant for B-cart for Shiv Furniture Works. Answer using ONLY the LIVE_CONTEXT below. If asked a question that needs data not in context, say so. Be concise, use ₹ for prices, never invent SKUs or numbers.
 
 LIVE_CONTEXT: ${JSON.stringify(ctx)}`;
 

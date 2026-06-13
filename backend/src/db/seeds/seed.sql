@@ -1,4 +1,4 @@
--- seed.sql — Realistic seed data for ForgeOps Mini ERP
+-- seed.sql — Realistic seed data for B-cart
 -- Note: User password_hash values are injected by seed.js before execution.
 
 -- ============================================================
@@ -16,10 +16,10 @@ INSERT INTO roles (name, description) VALUES
 -- Users (4 users) — password_hash placeholder replaced by seed.js
 -- ============================================================
 INSERT INTO users (login_id, email, password_hash, full_name, role_id, position, is_active) VALUES
-  ('admin', 'admin@forgeops.in', '__BCRYPT_HASH__', 'System Administrator', 1, 'Administrator', true),
-  ('ravi.jadeja', 'ravi.jadeja@forgeops.in', '__BCRYPT_HASH__', 'Ravi Jadeja', 3, 'Sales Executive', true),
-  ('vijay.sharma', 'vijay.sharma@forgeops.in', '__BCRYPT_HASH__', 'Vijay Sharma', 4, 'Purchase Manager', true),
-  ('salman.sheikh', 'salman.sheikh@forgeops.in', '__BCRYPT_HASH__', 'Salman Sheikh', 5, 'Production Lead', true);
+  ('admin', 'admin@B-cart.in', '__BCRYPT_HASH__', 'System Administrator', 1, 'Administrator', true),
+  ('ravi.jadeja', 'ravi.jadeja@B-cart.in', '__BCRYPT_HASH__', 'Ravi Jadeja', 3, 'Sales Executive', true),
+  ('vijay.sharma', 'vijay.sharma@B-cart.in', '__BCRYPT_HASH__', 'Vijay Sharma', 4, 'Purchase Manager', true),
+  ('salman.sheikh', 'salman.sheikh@B-cart.in', '__BCRYPT_HASH__', 'Salman Sheikh', 5, 'Production Lead', true);
 
 -- ============================================================
 -- Admin module access (all 6 modules)

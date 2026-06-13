@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🏭 ForgeOps Mini ERP</h1>
+  <h1>🏭 B-cart</h1>
   <p><strong>A highly-performant, AI-powered manufacturing ERP platform — orchestrate sales, automate procurement, schedule manufacturing, and trace supply chains with digital passports.</strong></p>
 
   [![Node.js](https://img.shields.io/badge/Node.js-20.x-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -205,5 +205,5 @@ npm run seed && node test_final.js
 
 <div align="center">
   <i>Developed for the Odoo Hackathon 2026</i><br/>
-  <b>Copyright © 2026 Aryanf192811-eng / ForgeOps. Released under the MIT License.</b>
+  <b>Copyright © 2026 Aryanf192811-eng / B-cart. Released under the MIT License.</b>
 </div>
