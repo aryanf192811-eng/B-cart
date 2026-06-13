@@ -11,7 +11,7 @@ export default function AuditLogs() {
 
   const { data: stats } = useQuery({
     queryKey: ['audit-stats'],
-    queryFn: async () => (await api.get('/audit/stats')).data
+    queryFn: async () => (await api.get('/audit/stats')).data.stats
   });
 
   const { data: logs, isLoading } = useQuery({
@@ -20,9 +20,9 @@ export default function AuditLogs() {
   });
 
   const columns = [
-    { key: 'dateAndTime', label: 'TIMESTAMP', render: (r) => format(new Date(r.dateAndTime), 'dd MMM yy HH:mm') },
-    { key: 'user', label: 'USER', render: (r) => r.user?.name || r.user?.full_name || 'System' },
-    { key: 'entityType', label: 'MODULE' },
+    { key: 'dateAndTime', label: 'TIMESTAMP', render: (r) => format(new Date(r.created_at || r.dateAndTime || new Date()), 'dd MMM yy HH:mm') },
+    { key: 'user', label: 'USER', render: (r) => r.user_name || r.user?.name || r.user?.full_name || 'System' },
+    { key: 'entityType', label: 'MODULE', render: (r) => r.module || r.entity_type },
     { key: 'action', label: 'ACTION', render: (r) => {
         let col = 'text-ink';
         if(r.action==='Created') col='text-success';
@@ -31,9 +31,9 @@ export default function AuditLogs() {
         return <span className={`font-medium ${col}`}>{r.action}</span>;
       }
     },
-    { key: 'fieldChanged', label: 'FIELD', render: (r) => <span className="font-mono text-[12px]">{r.fieldChanged || '—'}</span> },
-    { key: 'oldValue', label: 'OLD VALUE', render: (r) => <span className="font-mono text-[12px] text-steel truncate block max-w-[150px]" title={String(r.oldValue)}>{r.oldValue != null ? String(r.oldValue) : '—'}</span> },
-    { key: 'newValue', label: 'NEW VALUE', render: (r) => <span className="font-mono text-[12px] text-ink truncate block max-w-[150px]" title={String(r.newValue)}>{r.newValue != null ? String(r.newValue) : '—'}</span> }
+    { key: 'fieldChanged', label: 'FIELD', render: (r) => <span className="font-mono text-[12px]">{r.field_name || r.fieldChanged || '—'}</span> },
+    { key: 'oldValue', label: 'OLD VALUE', render: (r) => <span className="font-mono text-[12px] text-steel truncate block max-w-[150px]" title={String(r.old_value || r.oldValue || '')}>{(r.old_value || r.oldValue) != null ? String(r.old_value || r.oldValue) : '—'}</span> },
+    { key: 'newValue', label: 'NEW VALUE', render: (r) => <span className="font-mono text-[12px] text-ink truncate block max-w-[150px]" title={String(r.new_value || r.newValue || '')}>{(r.new_value || r.newValue) != null ? String(r.new_value || r.newValue) : '—'}</span> }
   ];
 
   return (
@@ -44,7 +44,7 @@ export default function AuditLogs() {
         <div className="stat-block"><div className="stat-label">Total Logs</div><div className="stat-value">{stats?.total_logs || 0}</div></div>
         <div className="stat-block border-l-2 border-success"><div className="stat-label">Records Created</div><div className="stat-value text-success">{stats?.records_created || 0}</div></div>
         <div className="stat-block border-l-2 border-info"><div className="stat-label">Records Updated</div><div className="stat-value text-info">{stats?.records_updated || 0}</div></div>
-        <div className="stat-block border-l-2 border-danger"><div className="stat-label">Records Deleted</div><div className="stat-value text-danger">{stats?.records_deleted || 0}</div></div>
+        <div className="stat-block border-l-2 border-danger"><div className="stat-label">Records Deleted</div><div className="stat-value text-danger">{stats?.records_changed || 0}</div></div>
       </div>
 
       <div className="flex gap-2">

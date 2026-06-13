@@ -201,7 +201,7 @@ export default function Dashboard() {
                 { key: 'status', label: 'STATUS', render: (r) => <StatusBadge status={r.status} /> }
               ]}
               emptyMessage="No open operations in queue."
-              onRowClick={(r) => navigate(`/${activeTab}/${r._id}`)}
+              onRowClick={(r) => navigate(`/${activeTab}/${r.id || r._id}`)}
             />
           </div>
         </div>

@@ -35,6 +35,7 @@ async function seed() {
     }
     await client.query('DELETE FROM bom');
     await client.query('DELETE FROM products');
+    await client.query('DELETE FROM product_categories');
     await client.query('DELETE FROM work_centers');
     await client.query('DELETE FROM customers');
     await client.query('DELETE FROM vendors');
@@ -46,7 +47,7 @@ async function seed() {
     const sequences = [
       'roles_id_seq', 'users_id_seq', 'user_module_access_id_seq',
       'vendors_id_seq', 'customers_id_seq', 'work_centers_id_seq',
-      'products_id_seq', 'bom_id_seq', 'bom_components_id_seq',
+      'product_categories_id_seq', 'products_id_seq', 'bom_id_seq', 'bom_components_id_seq',
       'bom_operations_id_seq', 'sales_orders_id_seq', 'so_lines_id_seq',
       'purchase_orders_id_seq', 'po_lines_id_seq',
       'manufacturing_orders_id_seq', 'mo_components_id_seq',

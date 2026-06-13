@@ -1,18 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
+import { E } from '../../api/endpoints';
 import Toolbar from '../../components/Toolbar';
 
 export default function BottleneckRadar() {
   const navigate = useNavigate();
   const { data: bottlenecks } = useQuery({
     queryKey: ['bottlenecks'],
-    queryFn: async () => (await api.get('/intelligence/bottleneck-radar')).data
+    queryFn: async () => (await api.get(E.intelBottlenecks())).data
   });
 
   return (
     <div className="flex flex-col gap-6 h-full">
-      <Toolbar title="Bottleneck Radar" count={bottlenecks?.length || 0} />
+      <Toolbar title="Bottleneck Radar" count={bottlenecks?.summary?.bottleneck_count || bottlenecks?.rows?.length || 0} />
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {(bottlenecks?.rows || []).map((b, i) => {
@@ -56,7 +57,7 @@ export default function BottleneckRadar() {
             </div>
           );
         })}
-        {bottlenecks?.length === 0 && (
+        {(!bottlenecks?.rows || bottlenecks.rows.length === 0) && (
           <div className="col-span-2 p-12 text-center text-steel2">No bottleneck data available.</div>
         )}
       </div>

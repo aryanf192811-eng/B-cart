@@ -58,15 +58,23 @@ INSERT INTO work_centers (code, name, capacity_per_hour, hourly_cost) VALUES
   ('WC-PKG', 'Packaging', 4, 200.00);
 
 -- ============================================================
+-- Product Categories (3)
+-- ============================================================
+INSERT INTO product_categories (name, description) VALUES
+  ('Furniture', 'Finished furniture products'),
+  ('Components', 'Manufactured or purchased parts'),
+  ('Raw Materials', 'Basic raw materials');
+
+-- ============================================================
 -- Products (6)
 -- ============================================================
-INSERT INTO products (sku, name, category, unit, sales_price, cost_price, on_hand_qty, min_stock_qty, lead_time_days, procure_on_demand, procurement_type, default_vendor_id) VALUES
-  ('DT-001', 'Dining Table', 'Furniture', 'Units', 8500.00, 5500.00, 5.000, 3.000, 7, true, 'manufacturing', NULL),
-  ('OC-001', 'Office Chair', 'Furniture', 'Units', 4200.00, 2800.00, 12.000, 5.000, 7, true, 'manufacturing', NULL),
-  ('WL-001', 'Wooden Legs', 'Components', 'Units', 250.00, 150.00, 80.000, 50.000, 5, true, 'purchase', 1),
-  ('WT-001', 'Wooden Top', 'Components', 'Units', 1200.00, 800.00, 15.000, 10.000, 5, true, 'purchase', 1),
-  ('SC-001', 'Screws (pack of 12)', 'Components', 'Packs', 50.00, 30.00, 200.000, 100.000, 3, false, NULL, 4),
-  ('FB-001', 'Fabric (m)', 'Raw Materials', 'Meters', 180.00, 110.00, 35.000, 20.000, 5, true, 'purchase', 2);
+INSERT INTO products (sku, name, category_id, unit, sales_price, cost_price, on_hand_qty, min_stock_qty, lead_time_days, procure_on_demand, procurement_type, default_vendor_id) VALUES
+  ('DT-001', 'Dining Table', 1, 'Units', 8500.00, 5500.00, 5.000, 3.000, 7, true, 'manufacturing', NULL),
+  ('OC-001', 'Office Chair', 1, 'Units', 4200.00, 2800.00, 12.000, 5.000, 7, true, 'manufacturing', NULL),
+  ('WL-001', 'Wooden Legs', 2, 'Units', 250.00, 150.00, 80.000, 50.000, 5, true, 'purchase', 1),
+  ('WT-001', 'Wooden Top', 2, 'Units', 1200.00, 800.00, 15.000, 10.000, 5, true, 'purchase', 1),
+  ('SC-001', 'Screws (pack of 12)', 2, 'Packs', 50.00, 30.00, 200.000, 100.000, 3, false, NULL, 4),
+  ('FB-001', 'Fabric (m)', 3, 'Meters', 180.00, 110.00, 35.000, 20.000, 5, true, 'purchase', 2);
 
 -- ============================================================
 -- BoMs (2)
@@ -216,3 +224,61 @@ UPDATE products SET on_hand_qty = 10.000 WHERE sku = 'OC-001'; -- after selling 
 -- WT-001: 15 (current on-hand as seeded) 
 -- SC-001: 200 (current on-hand as seeded)
 -- FB-001: 35 (current on-hand as seeded)
+
+-- ============================================================
+-- Demo Completed Manufacturing Order for Product Passports
+-- ============================================================
+INSERT INTO manufacturing_orders (mo_number, product_id, bom_id, qty, status, assignee_id, schedule_date, source_type, source_ref, confirmed_at, completed_at, created_by, created_at)
+VALUES ('MO-000002', 1, 1, 3.000, 'done', 4, '2026-05-18', 'manual', NULL, '2026-05-18 10:00:00+05:30', '2026-05-20 16:30:00+05:30', 4, '2026-05-18 09:00:00+05:30');
+
+INSERT INTO mo_components (mo_id, component_id, qty_required, qty_consumed) VALUES
+  (2, 3, 12.000, 12.000),
+  (2, 4, 3.000, 3.000),
+  (2, 5, 36.000, 36.000);
+
+-- Provide some completed work orders
+INSERT INTO work_orders (mo_id, work_center_id, operation_name, duration_mins, real_duration_secs, sequence, status, started_at, completed_at) VALUES
+  (2, 1, 'Assembly', 180, 10800, 1, 'done', '2026-05-18 11:00:00+05:30', '2026-05-19 14:00:00+05:30'),
+  (2, 2, 'Paint', 90, 5600, 2, 'done', '2026-05-19 15:00:00+05:30', '2026-05-20 10:00:00+05:30'),
+  (2, 3, 'Pack', 60, 3600, 3, 'done', '2026-05-20 11:00:00+05:30', '2026-05-20 16:00:00+05:30');
+
+-- The passport for this completed MO
+INSERT INTO product_passports (passport_id, mo_id, product_id, batch_number, qty_produced, manufactured_by, manufacture_date, qc_status, qc_notes, qc_reviewed_by, qc_reviewed_at)
+VALUES ('PASS-DT-1002', 2, 1, 'BATCH-202605-DT01', 3.000, 4, '2026-05-20 16:30:00+05:30', 'passed', 'All tables pass visual and structural tests.', 1, '2026-05-21 10:00:00+05:30');
+
+-- Passport components (Traceability)
+INSERT INTO passport_components (passport_id, component_id, component_name, qty_used, source_vendor_id, source_po_id, batch_reference) VALUES
+  (1, 3, 'Wooden Legs', 12.000, 1, 1, 'PO-000001-B1'),
+  (1, 4, 'Wooden Top', 3.000, 1, 1, 'PO-000001-B1'),
+  (1, 5, 'Screws (pack of 12)', 36.000, 4, 4, 'PO-000004-B1');
+
+-- ============================================================
+-- Demo Active Work Orders for Bottleneck Radar
+-- ============================================================
+-- We will add a few draft MOs that got confirmed, and have active work orders clogging up the Paint and Assembly lines.
+INSERT INTO manufacturing_orders (mo_number, product_id, bom_id, qty, status, assignee_id, schedule_date, confirmed_at, created_by, created_at) VALUES
+  ('MO-000003', 2, 2, 50.000, 'in_progress', 4, '2026-06-14', '2026-06-13 09:00:00+05:30', 4, '2026-06-13 08:00:00+05:30'),
+  ('MO-000004', 1, 1, 20.000, 'in_progress', 4, '2026-06-15', '2026-06-13 10:00:00+05:30', 4, '2026-06-13 09:30:00+05:30');
+
+-- High load on Work Center 1 (Assembly Line: cap 2, so 960 mins)
+INSERT INTO work_orders (mo_id, work_center_id, operation_name, duration_mins, sequence, status) VALUES
+  (3, 1, 'Assembly - Bulk Chairs', 1200, 1, 'in_progress'), -- Overloads WC-ASM (1200 > 960)
+  (3, 3, 'Pack - Bulk Chairs', 300, 2, 'pending');
+
+-- High load on Work Center 2 (Paint Floor: cap 1, so 480 mins)
+INSERT INTO work_orders (mo_id, work_center_id, operation_name, duration_mins, sequence, status) VALUES
+  (4, 1, 'Assembly - Tables', 400, 1, 'pending'),
+  (4, 2, 'Paint - Tables', 600, 2, 'pending'), -- Overloads WC-PNT (600 > 480)
+  (4, 3, 'Pack - Tables', 200, 3, 'pending');
+
+-- ============================================================
+-- Demo Audit Logs
+-- ============================================================
+INSERT INTO audit_logs (user_id, module, action, entity_type, entity_id, entity_ref, field_name, old_value, new_value, created_at) VALUES
+  (1, 'System', 'Login', 'User', 1, 'admin', NULL, NULL, 'Success', NOW() - INTERVAL '2 days'),
+  (2, 'Sales', 'Created', 'SalesOrder', 1, 'SO-000001', NULL, NULL, 'Created SO', NOW() - INTERVAL '1 days'),
+  (2, 'Sales', 'Updated', 'SalesOrder', 1, 'SO-000001', 'status', 'draft', 'confirmed', NOW() - INTERVAL '1 days'),
+  (4, 'Manufacturing', 'Created', 'ManufacturingOrder', 2, 'MO-000002', NULL, NULL, 'Created MO', NOW() - INTERVAL '20 hours'),
+  (4, 'Manufacturing', 'Updated', 'ManufacturingOrder', 2, 'MO-000002', 'status', 'in_progress', 'done', NOW() - INTERVAL '5 hours'),
+  (1, 'Quality', 'Passed', 'ProductPassport', 1, 'PASS-DT-1002', 'qc_status', 'pending', 'passed', NOW() - INTERVAL '4 hours');
+
