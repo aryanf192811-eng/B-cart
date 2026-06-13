@@ -1,0 +1,232 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { AlertCircle, FileText, ShoppingCart, Truck, Factory, Activity, CheckCircle2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { format } from 'date-fns';
+
+import { api } from '../api/client';
+import { E } from '../api/endpoints';
+import { useAuth } from '../store/auth';
+import { useSocket } from '../hooks/useSocket';
+import DataTable from '../components/DataTable';
+import StatusBadge from '../components/StatusBadge';
+
+export default function Dashboard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { socket } = useSocket();
+  const [activeTab, setActiveTab] = useState('sales');
+
+  const { data: kpiData, refetch: refetchKpis } = useQuery({
+    queryKey: ['dashboard-kpis'],
+    queryFn: async () => {
+      const { data } = await api.get(E.kpis());
+      return data;
+    }
+  });
+
+  const { data: alertData, refetch: refetchAlerts } = useQuery({
+    queryKey: ['control-tower-alerts'],
+    queryFn: async () => {
+      const { data } = await api.get(E.controlTower());
+      return data.slice(0, 5); // top 5
+    }
+  });
+
+  // Fetch recent items for active tab
+  const { data: tabData, refetch: refetchTab } = useQuery({
+    queryKey: ['dashboard-recent', activeTab],
+    queryFn: async () => {
+      // Need a recent items endpoint, assuming /sales?limit=8 etc exists.
+      // We will map based on activeTab.
+      let endpoint = '';
+      if (activeTab === 'sales') endpoint = `${E.sales()}?limit=8`;
+      if (activeTab === 'purchase') endpoint = `${E.purchase()}?limit=8`;
+      if (activeTab === 'manufacturing') endpoint = `${E.mo()}?limit=8`;
+      
+      const { data } = await api.get(endpoint);
+      // Filter out fully done items if backend hasn't
+      return data.filter(i => !['fully_delivered', 'fully_received', 'done', 'cancelled'].includes(i.status)).slice(0, 8);
+    }
+  });
+
+  // Socket listener
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleUpdate = (data) => {
+      // Refetch data slightly debounced
+      setTimeout(() => {
+        refetchKpis();
+        refetchAlerts();
+        refetchTab();
+      }, 500);
+
+      // Toast notification
+      toast(
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(data.link || '/')}>
+          <div className="w-1.5 h-1.5 rounded-full bg-rust"></div>
+          <div>
+            <span className="font-mono text-[12px] font-bold">{data.ref}</span> {data.action}
+          </div>
+        </div>,
+        { duration: 4000 }
+      );
+    };
+
+    socket.on('sales:update', handleUpdate);
+    socket.on('purchase:update', handleUpdate);
+    socket.on('mo:update', handleUpdate);
+
+    return () => {
+      socket.off('sales:update', handleUpdate);
+      socket.off('purchase:update', handleUpdate);
+      socket.off('mo:update', handleUpdate);
+    };
+  }, [socket, refetchKpis, refetchAlerts, refetchTab, navigate]);
+
+  // Derived state
+  const timeOfDay = new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening';
+  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+  const alertsCount = alertData?.length || 0;
+
+  // Stat blocks data parsing
+  const counts = kpiData?.counts || { sales: {}, purchase: {}, manufacturing: {}, inventory: {} };
+  const openSO = (counts.sales.draft || 0) + (counts.sales.confirmed || 0) + (counts.sales.partially_delivered || 0);
+  const openPO = (counts.purchase.draft || 0) + (counts.purchase.confirmed || 0) + (counts.purchase.partially_received || 0);
+  const activeMO = (counts.manufacturing.in_progress || 0) + (counts.manufacturing.to_close || 0);
+  const lowStock = counts.inventory.low_stock_count || 0;
+
+  return (
+    <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto">
+      {/* ROW 1: Hero strip */}
+      <div>
+        <div className="text-[11px] font-semibold text-steel uppercase tracking-wider mb-2">
+          OPERATIONS · {today}
+        </div>
+        <h1 className="text-[28px] font-bold text-ink leading-tight">
+          Good {timeOfDay}, {user?.name || user?.full_name || 'User'}.
+        </h1>
+        <p className="text-[14px] text-steel mt-2 flex items-center gap-1.5">
+          {alertsCount > 0 ? (
+            <span className="cursor-pointer hover:text-ink transition-colors flex items-center gap-1" onClick={() => navigate('/control-tower')}>
+              <AlertCircle size={14} className="text-warn" />
+              {alertsCount} alerts on the control tower ↗
+            </span>
+          ) : (
+            <span className="flex items-center gap-1">
+              <CheckCircle2 size={14} className="text-success" />
+              Operations are running clean.
+            </span>
+          )}
+        </p>
+      </div>
+
+      {/* ROW 2: Stat Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/sales')}>
+          <div className="stat-label flex items-center gap-1.5"><ShoppingCart size={12}/> Sales · open</div>
+          <div className="stat-value">{openSO}</div>
+          <div className="stat-delta">late: {counts.sales.late || 0}</div>
+        </div>
+        <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/purchase')}>
+          <div className="stat-label flex items-center gap-1.5"><Truck size={12}/> Purchase · open</div>
+          <div className="stat-value">{openPO}</div>
+          <div className="stat-delta">late: {counts.purchase.late || 0}</div>
+        </div>
+        <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/manufacturing')}>
+          <div className="stat-label flex items-center gap-1.5"><Factory size={12}/> Manufacturing · active</div>
+          <div className="stat-value">{activeMO}</div>
+          <div className="stat-delta">blocked: {counts.manufacturing.blocked || 0}</div>
+        </div>
+        <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/products?low_stock=true')}>
+          <div className="stat-label flex items-center gap-1.5"><Activity size={12}/> Inventory · low stock</div>
+          <div className="stat-value text-danger">{lowStock}</div>
+          <div className="stat-delta">needs attention</div>
+        </div>
+      </div>
+
+      {/* ROW 3: Split columns */}
+      <div className="flex flex-col lg:flex-row gap-6 w-full">
+        {/* LEFT: Operations queue */}
+        <div className="card w-full lg:w-[60%] flex flex-col h-[400px]">
+          <div className="px-6 py-4 border-b-[0.5px] border-rule flex justify-between items-center">
+            <h2 className="font-semibold text-ink">Operations queue</h2>
+          </div>
+          <div className="tabs px-2 pt-2">
+            {[
+              { id: 'sales', label: 'Sales' },
+              { id: 'purchase', label: 'Purchase' },
+              { id: 'manufacturing', label: 'Manufacturing' }
+            ].map(t => (
+              <div 
+                key={t.id} 
+                className={`tab ${activeTab === t.id ? 'tab-active' : ''}`}
+                onClick={() => setActiveTab(t.id)}
+              >
+                {t.label}
+              </div>
+            ))}
+          </div>
+          <div className="flex-1 overflow-auto">
+            <DataTable
+              loading={!tabData && kpiData !== undefined} // simulate loading if refetching
+              rows={tabData || []}
+              columns={[
+                { key: activeTab === 'sales' ? 'soNumber' : activeTab === 'purchase' ? 'poNumber' : 'moNumber', label: 'REF', render: (r) => <span className="font-mono">{r.soNumber || r.poNumber || r.moNumber}</span> },
+                { key: 'counterparty', label: 'COUNTERPARTY', render: (r) => r.customerName || r.vendorName || r.finishedProduct?.name || 'Unknown' },
+                { key: 'createdAt', label: 'DATE', render: (r) => <span className="text-steel">{format(new Date(r.createdAt || Date.now()), 'MMM d')}</span> },
+                { key: 'status', label: 'STATUS', render: (r) => <StatusBadge status={r.status} /> }
+              ]}
+              emptyMessage="No open operations in queue."
+              onRowClick={(r) => navigate(`/${activeTab}/${r._id}`)}
+            />
+          </div>
+        </div>
+
+        {/* RIGHT: Control tower */}
+        <div className="card w-full lg:w-[40%] flex flex-col h-[400px]">
+          <div className="px-6 py-4 border-b-[0.5px] border-rule">
+            <h2 className="font-semibold text-ink flex items-center gap-2">
+              <Radar size={16} className="text-rust" />
+              Control tower
+            </h2>
+          </div>
+          <div className="flex-1 overflow-auto p-4 space-y-3">
+            {!alertData || alertData.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-steel2 text-[13px]">
+                <CheckCircle2 size={24} className="mb-2 opacity-50" />
+                No active alerts.
+              </div>
+            ) : (
+              alertData.map((alert, i) => (
+                <div key={i} className={`panel-band bg-paper2 py-3 pr-4 rounded-r flex flex-col gap-1 border-${alert.severity === 'high' ? 'danger' : alert.severity === 'medium' ? 'warn' : 'info'}`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-1.5 font-bold text-[13px] text-ink">
+                      <AlertCircle size={14} className={alert.severity === 'high' ? 'text-danger' : alert.severity === 'medium' ? 'text-warn' : 'text-info'} />
+                      {alert.subject}
+                    </div>
+                  </div>
+                  <div className="text-[12px] text-steel truncate pl-[20px]">
+                    {alert.message}
+                  </div>
+                  <div className="text-right mt-1">
+                    <span className="text-[11px] text-ink hover:underline cursor-pointer font-medium" onClick={() => navigate(alert.link || '/control-tower')}>
+                      Take action ↗
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="border-t-[0.5px] border-rule p-2">
+            <button className="btn btn-ghost w-full justify-center text-steel hover:text-ink" onClick={() => navigate('/control-tower')}>
+              See all alerts
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
