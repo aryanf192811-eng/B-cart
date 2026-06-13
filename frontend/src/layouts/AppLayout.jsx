@@ -5,7 +5,7 @@ import Chatbot from '../components/Chatbot';
 import CommandPalette from '../components/CommandPalette';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { 
-  Home, Radar, ShoppingCart, Truck, Factory, Package, 
+  Home, ShoppingCart, Truck, Factory, Package, 
   FileText, Building2, UserCircle, Cog, LineChart, 
   Award, Activity, Layers, BadgeCheck, Users, ScrollText,
   MessageSquare
@@ -83,119 +83,283 @@ export default function AppLayout() {
   const initials = user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'AD';
 
   return (
-    <div className="min-h-screen bg-paper text-ink flex">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 w-[220px] bg-white border-r-[0.5px] border-rule text-ink2 flex flex-col z-20">
-        <div className="h-[48px] flex flex-col justify-center px-4 mb-4 bg-rust">
-          <div className="font-mono text-[15px] font-bold text-white tracking-widest">B-cart</div>
+    <div className="min-h-screen flex" style={{ background: 'var(--surface)' }}>
+      {/* ── SIDEBAR ── */}
+      <aside style={{
+        position: 'fixed',
+        inset: '0 auto 0 0',
+        width: '220px',
+        background: 'var(--surface-container-low)',
+        borderRight: '1px solid var(--outline-variant)',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 20,
+      }}>
+        {/* Brand wordmark */}
+        <div style={{
+          height: '56px',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 20px',
+          borderBottom: '1px solid var(--outline-variant)',
+          flexShrink: 0,
+        }}>
+          <span style={{
+            fontFamily: 'var(--font-serif)',
+            fontSize: '22px',
+            fontWeight: 600,
+            color: 'var(--primary)',
+            letterSpacing: '-0.01em',
+            userSelect: 'none',
+          }}>B-cart</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar pb-6 space-y-6">
+        {/* Nav items */}
+        <div className="flex-1 overflow-y-auto no-scrollbar py-3" style={{ gap: 0 }}>
           {NAV_CONFIG.map((group, idx) => (
-            <div key={idx} className="flex flex-col gap-1">
-              <div className="text-[11px] font-bold text-steel px-4 mb-1 tracking-wide">
+            <div key={idx} style={{ marginBottom: '4px' }}>
+              <div style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'var(--outline)',
+                padding: idx === 0 ? '8px 16px 6px' : '16px 16px 6px',
+                borderTop: idx > 0 ? '1px solid var(--outline-variant)' : 'none',
+                marginTop: idx > 0 ? '8px' : 0,
+              }}>
                 {group.label}
               </div>
               {group.items.map((item) => (
-                <NavLink 
-                  key={item.path} 
+                <NavLink
+                  key={item.path}
                   to={item.path}
                   end={item.path === '/'}
+                  style={{ textDecoration: 'none' }}
                   className={({ isActive }) => clsx(
-                    "flex items-center h-[32px] px-[14px] text-[13px] transition-colors rounded-r-full mr-2",
-                    isActive ? "bg-paper2 text-ink font-semibold" : "hover:bg-paper text-ink2"
+                    'flex items-center gap-3 mx-2 px-3 rounded-xl transition-all',
+                    isActive
+                      ? 'bg-[var(--surface-container-highest)] text-[var(--primary)] font-semibold'
+                      : 'text-[var(--on-surface-variant)] hover:bg-[var(--surface-container)] hover:text-[var(--on-surface)]'
                   )}
+                  style={({ isActive }) => ({
+                    height: '34px',
+                    fontSize: '13px',
+                    fontFamily: 'var(--font-sans)',
+                    fontWeight: isActive ? 600 : 500,
+                    position: 'relative',
+                  })}
                 >
-                  <item.icon size={16} className="mr-3 opacity-80" />
-                  <span>{item.name}</span>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <span style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: '5px',
+                          bottom: '5px',
+                          width: '3px',
+                          background: 'var(--primary)',
+                          borderRadius: '0 9999px 9999px 0',
+                        }} />
+                      )}
+                      <item.icon size={15} style={{ opacity: isActive ? 1 : 0.65, flexShrink: 0 }} />
+                      <span>{item.name}</span>
+                    </>
+                  )}
                 </NavLink>
               ))}
             </div>
           ))}
 
+          {/* Admin section */}
           {user?.role === 'Admin' && (
-            <div className="flex flex-col gap-1">
-              <div className="text-[11px] font-bold text-steel px-4 mb-1 tracking-wide">
+            <div style={{ marginTop: '8px', borderTop: '1px solid var(--outline-variant)', paddingTop: '8px' }}>
+              <div style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'var(--outline)',
+                padding: '8px 16px 6px',
+              }}>
                 ADMIN
               </div>
-              <NavLink to="/users" className={({ isActive }) => clsx(
-                "flex items-center h-[32px] px-[14px] text-[13px] transition-colors rounded-r-full mr-2",
-                isActive ? "bg-paper2 text-ink font-semibold" : "hover:bg-paper text-ink2"
-              )}>
-                <Users size={16} className="mr-3 opacity-80" />
-                <span>Users</span>
-              </NavLink>
-              <NavLink to="/audit" className={({ isActive }) => clsx(
-                "flex items-center h-[32px] px-[14px] text-[13px] transition-colors rounded-r-full mr-2",
-                isActive ? "bg-paper2 text-ink font-semibold" : "hover:bg-paper text-ink2"
-              )}>
-                <ScrollText size={16} className="mr-3 opacity-80" />
-                <span>Audit Logs</span>
-              </NavLink>
+              {[
+                { name: 'Users', icon: Users, path: '/users' },
+                { name: 'Audit Logs', icon: ScrollText, path: '/audit' }
+              ].map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  style={{ textDecoration: 'none' }}
+                  className={({ isActive }) => clsx(
+                    'flex items-center gap-3 mx-2 px-3 rounded-xl transition-all',
+                    isActive
+                      ? 'bg-[var(--surface-container-highest)] text-[var(--primary)] font-semibold'
+                      : 'text-[var(--on-surface-variant)] hover:bg-[var(--surface-container)] hover:text-[var(--on-surface)]'
+                  )}
+                  style={{ height: '34px', fontSize: '13px', fontFamily: 'var(--font-sans)', fontWeight: 500 }}
+                >
+                  <item.icon size={15} style={{ opacity: 0.65, flexShrink: 0 }} />
+                  <span>{item.name}</span>
+                </NavLink>
+              ))}
             </div>
           )}
         </div>
       </aside>
 
-      {/* Main Container */}
-      <div className="ml-[220px] flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Topbar */}
-        <header className="h-[48px] sticky top-0 bg-rust z-10 flex items-center justify-between px-6 text-white shadow-sm">
-          {/* Left: Title */}
-          <div className="flex-1 min-w-0 text-[15px] font-semibold flex items-center truncate pr-4">
+      {/* ── MAIN CONTAINER ── */}
+      <div style={{ marginLeft: '220px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0 }}>
+        
+        {/* ── TOPBAR ── */}
+        <header style={{
+          height: '56px',
+          position: 'sticky',
+          top: 0,
+          background: 'var(--surface-container-lowest)',
+          borderBottom: '1px solid var(--outline-variant)',
+          boxShadow: 'var(--shadow-xs)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          padding: '0 28px',
+          zIndex: 10,
+        }}>
+          {/* Page section name */}
+          <div style={{
+            flex: 1,
+            minWidth: 0,
+            fontFamily: 'var(--font-sans)',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: 'var(--on-surface-variant)',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
             {currentSection}
           </div>
 
-          {/* Center: Search Bar */}
-          <div className="flex-none w-full max-w-[400px] flex justify-center px-4">
-            <div className="w-full relative">
-              <input 
-                type="text" 
-                placeholder="Search SO, PO, MO, product..." 
-                className="w-full h-8 bg-rust2 border-[0.5px] border-rust2 rounded px-3 text-[13px] text-white placeholder:text-white/70 focus:border-white focus:ring-1 focus:ring-white outline-none transition-all"
-              />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[11px] text-white/80 px-1 border-[0.5px] border-white/20 rounded bg-rust2">
-                ⌘K
-              </div>
+          {/* Search bar (pill shape) */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <input
+              type="text"
+              placeholder="Search SO, PO, MO, product..."
+              style={{
+                height: '34px',
+                padding: '0 36px 0 14px',
+                background: 'var(--surface-container-low)',
+                border: '1px solid var(--outline-variant)',
+                borderRadius: '9999px',
+                fontFamily: 'var(--font-sans)',
+                fontSize: '13px',
+                color: 'var(--on-surface)',
+                width: '300px',
+                transition: 'all 150ms',
+                outline: 'none',
+              }}
+              onFocus={e => {
+                e.target.style.borderColor = 'var(--secondary)';
+                e.target.style.width = '360px';
+                e.target.style.boxShadow = '0 0 0 3px rgba(78,97,110,0.12)';
+              }}
+              onBlur={e => {
+                e.target.style.borderColor = 'var(--outline-variant)';
+                e.target.style.width = '300px';
+                e.target.style.boxShadow = 'none';
+              }}
+              onKeyDown={(e) => { if (e.metaKey && e.key === 'k') { e.preventDefault(); setIsCmdOpen(true); } }}
+            />
+            <div style={{
+              position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+              fontFamily: 'ui-monospace, monospace', fontSize: '10px', color: 'var(--outline)',
+              padding: '1px 5px', border: '1px solid var(--outline-variant)', borderRadius: '5px',
+              pointerEvents: 'none',
+            }}>
+              ⌘K
             </div>
           </div>
 
-          {/* Right: Actions */}
-          <div className="flex-1 min-w-0 flex items-center justify-end gap-3">
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-rust2">
-              <div className={clsx("w-2 h-2 rounded-full", connected ? "bg-[#198754]" : "bg-[#DC3545]")}></div>
-              <span className="font-mono text-[10px] tracking-wider text-white font-medium">
+          {/* Right actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Live indicator */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '3px 10px', borderRadius: '9999px', background: 'var(--surface-container)', border: '1px solid var(--outline-variant)' }}>
+              <div style={{ width: '7px', height: '7px', borderRadius: '9999px', background: connected ? '#15803d' : '#ba1a1a', boxShadow: connected ? '0 0 6px rgba(21,128,61,0.5)' : 'none' }} />
+              <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '10px', letterSpacing: '0.05em', color: connected ? '#15803d' : '#ba1a1a', fontWeight: 600 }}>
                 {connected ? 'LIVE' : 'OFFLINE'}
               </span>
             </div>
 
-            <button 
+            {/* Chatbot button */}
+            <button
               onClick={() => setIsChatOpen(true)}
-              className="text-white/80 hover:text-white transition-colors p-1"
+              style={{
+                width: '34px', height: '34px', borderRadius: '9999px',
+                border: '1px solid var(--outline-variant)', background: 'var(--surface-container-low)',
+                color: 'var(--on-surface-variant)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 150ms',
+              }}
+              onMouseEnter={e => { e.target.style.background = 'var(--surface-container)'; e.target.style.color = 'var(--on-surface)'; }}
+              onMouseLeave={e => { e.target.style.background = 'var(--surface-container-low)'; e.target.style.color = 'var(--on-surface-variant)'; }}
             >
-              <MessageSquare size={18} />
+              <MessageSquare size={16} />
             </button>
 
-            <div className="relative group cursor-pointer ml-1">
-              <div className="w-[28px] h-[28px] bg-white text-rust rounded-sm flex items-center justify-center text-[11px] font-bold tracking-wider select-none">
+            {/* User avatar */}
+            <div className="relative group cursor-pointer">
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '9999px',
+                background: 'var(--primary-container)', color: 'var(--inverse-primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700,
+                userSelect: 'none', letterSpacing: '0.05em',
+                transition: 'opacity 150ms',
+              }}>
                 {initials}
               </div>
-              
-              <div className="absolute right-0 top-full mt-1 w-40 bg-white text-ink border-[0.5px] border-rule rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                <div className="py-1">
-                  <div className="px-3 py-2 text-[12px] text-steel border-b-[0.5px] border-rule truncate">
-                    {user?.name}
-                  </div>
-                  <NavLink to="/users/me" className="block px-3 py-1.5 text-[13px] hover:bg-paper2">My Profile</NavLink>
-                  <button onClick={logout} className="w-full text-left px-3 py-1.5 text-[13px] hover:bg-paper2 text-danger">Sign out</button>
+
+              {/* Dropdown */}
+              <div style={{
+                position: 'absolute', right: 0, top: 'calc(100% + 6px)',
+                width: '168px', background: 'var(--surface-container-lowest)',
+                border: '1px solid var(--outline-variant)', borderRadius: '14px',
+                boxShadow: 'var(--shadow-lg)', zIndex: 50, overflow: 'hidden',
+              }} className="opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                <div style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--on-surface-variant)', borderBottom: '1px solid var(--outline-variant)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.name}
                 </div>
+                <NavLink to="/users/me" style={{ display: 'block', padding: '8px 14px', fontSize: '13px', color: 'var(--on-surface)', textDecoration: 'none' }}
+                  onMouseEnter={e => e.target.style.background = 'var(--surface-container-low)'}
+                  onMouseLeave={e => e.target.style.background = 'transparent'}>
+                  My Profile
+                </NavLink>
+                <button onClick={logout} style={{
+                  width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: '13px',
+                  color: 'var(--error)', background: 'transparent', border: 'none', cursor: 'pointer',
+                  transition: 'background 150ms',
+                }}
+                  onMouseEnter={e => e.target.style.background = 'var(--error-container)'}
+                  onMouseLeave={e => e.target.style.background = 'transparent'}>
+                  Sign out
+                </button>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 p-6 lg:p-8">
+        {/* ── PAGE CONTENT ── */}
+        <main style={{
+          flex: 1,
+          padding: '28px 32px',
+          animation: 'fadeInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+        }}>
           <ErrorBoundary>
             <Outlet />
           </ErrorBoundary>
