@@ -64,7 +64,7 @@ export default function Login() {
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-rust/90 via-ink/50 to-ink/20"></div>
 
         <div className="relative z-20">
-          <h1 className="font-mono text-4xl text-white tracking-widest font-bold drop-shadow-lg">B-Card</h1>
+          <h1 className="font-mono text-4xl text-white tracking-widest font-bold drop-shadow-lg">B-cart</h1>
           <p className="text-white/90 text-[15px] mt-2 font-medium drop-shadow-md">Mini ERP · Operations Floor</p>
         </div>
         <div className="relative z-20 border-l-4 border-rust pl-5 text-white text-[15px] leading-relaxed font-medium max-w-sm drop-shadow-md">
@@ -76,7 +76,7 @@ export default function Login() {
       <div className="flex w-full lg:w-[60%] bg-paper items-center justify-center p-8">
         <div className="w-full max-w-[340px]">
           <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rust to-info mb-2 drop-shadow-sm" style={{ fontFamily: 'Roboto, sans-serif' }}>
-            Welcome to B-Card
+            Welcome to B-cart
           </h1>
           <p className="text-[15px] text-steel font-medium mb-8">Sign in to the operations floor</p>
           

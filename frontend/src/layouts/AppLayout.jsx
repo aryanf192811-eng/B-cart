@@ -88,7 +88,7 @@ export default function AppLayout() {
       {/* Sidebar */}
       <aside className="fixed inset-y-0 left-0 w-[220px] bg-white border-r-[0.5px] border-rule text-ink2 flex flex-col z-20">
         <div className="h-[48px] flex flex-col justify-center px-4 mb-4 bg-rust">
-          <div className="font-mono text-[15px] font-bold text-white tracking-widest">B-Card</div>
+          <div className="font-mono text-[15px] font-bold text-white tracking-widest">B-cart</div>
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar pb-6 space-y-6">

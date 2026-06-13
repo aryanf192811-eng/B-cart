@@ -121,7 +121,7 @@ export default function PurchaseForm({ mode }) {
         key: data.key_id,
         amount: data.amount,
         currency: data.currency,
-        name: 'B-Card · ' + data.vendor,
+        name: 'B-cart · ' + data.vendor,
         description: `Purchase Order Payment for ${data.po_number}`,
         order_id: data.razorpay_order_id,
         handler: async (resp) => {
