@@ -24,11 +24,12 @@ export default function VendorForm({ mode }) {
   });
   const vendor = vendorData?.vendor;
 
-  const { data: performance } = useQuery({
+  const { data: performanceData } = useQuery({
     queryKey: ['vendors', id, 'performance'],
-    queryFn: async () => (await api.get(`/intelligence/vendor-scores?vendor_id=${id}`)).data,
+    queryFn: async () => (await api.get(`/vendors/${id}/performance`)).data,
     enabled: !isNew && activeTab === 'performance'
   });
+  const performance = performanceData?.reliability;
 
   const form = useForm({
     defaultValues: { name: '', email: '', phone: '', address: '', tags: [] }
@@ -86,10 +87,10 @@ export default function VendorForm({ mode }) {
           {activeTab === 'performance' && performance && (
             <div className="flex flex-col gap-6">
               <div className="grid grid-cols-4 gap-4">
-                <div className="stat-block"><div className="stat-label">Total Orders</div><div className="stat-value">{performance.totalOrders || 0}</div></div>
-                <div className="stat-block"><div className="stat-label">On-time %</div><div className="stat-value font-mono">{performance.onTimePercentage || 0}%</div></div>
-                <div className="stat-block"><div className="stat-label">Fulfillment %</div><div className="stat-value font-mono">{performance.fulfillmentPercentage || 0}%</div></div>
-                <div className="stat-block"><div className="stat-label">Quality Score</div><div className="stat-value font-mono">{performance.qualityScore || 0}/100</div></div>
+                <div className="stat-block"><div className="stat-label">Total Orders</div><div className="stat-value">{performance.total_orders || 0}</div></div>
+                <div className="stat-block"><div className="stat-label">On-time %</div><div className="stat-value font-mono">{parseFloat(performance.on_time_rate || 0).toFixed(1)}%</div></div>
+                <div className="stat-block"><div className="stat-label">Fulfillment %</div><div className="stat-value font-mono">{parseFloat(performance.fulfillment_rate || 0).toFixed(1)}%</div></div>
+                <div className="stat-block"><div className="stat-label">Reliability Score</div><div className="stat-value font-mono">{parseFloat(performance.reliability_score || 0).toFixed(1)}/100</div></div>
               </div>
             </div>
           )}

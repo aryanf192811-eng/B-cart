@@ -24,12 +24,6 @@ export default function CustomerForm({ mode }) {
   });
   const customer = customerData?.customer;
 
-  const { data: performance } = useQuery({
-    queryKey: ['customers', id, 'performance'],
-    queryFn: async () => (await api.get(`/intelligence/vendor-scores?customer_id=${id}`)).data,
-    enabled: !isNew && activeTab === 'performance'
-  });
-
   const form = useForm({
     defaultValues: { name: '', email: '', phone: '', address: '', tags: [] }
   });
@@ -64,7 +58,7 @@ export default function CustomerForm({ mode }) {
         <FormShell.Header title={isNew ? 'New Customer' : (isEditing ? 'Edit Customer' : customer?.name)} subtitle="Customer Profile" />
         
         <FormShell.Tabs 
-          tabs={[{ id: 'general', label: 'General' }, ...(!isNew ? [{ id: 'performance', label: 'Performance' }] : [])]}
+          tabs={[{ id: 'general', label: 'General' }]}
           active={activeTab}
           onChange={setActiveTab}
         />
@@ -80,17 +74,6 @@ export default function CustomerForm({ mode }) {
                   <FieldRow label="Address"><input {...form.register('address')} className="field" /></FieldRow>
                 </FieldGrid>
               </fieldset>
-            </div>
-          )}
-
-          {activeTab === 'performance' && performance && (
-            <div className="flex flex-col gap-6">
-              <div className="grid grid-cols-4 gap-4">
-                <div className="stat-block"><div className="stat-label">Total Orders</div><div className="stat-value">{performance.totalOrders || 0}</div></div>
-                <div className="stat-block"><div className="stat-label">On-time %</div><div className="stat-value font-mono">{performance.onTimePercentage || 0}%</div></div>
-                <div className="stat-block"><div className="stat-label">Fulfillment %</div><div className="stat-value font-mono">{performance.fulfillmentPercentage || 0}%</div></div>
-                <div className="stat-block"><div className="stat-label">Satisfaction</div><div className="stat-value font-mono">{performance.qualityScore || 0}/100</div></div>
-              </div>
             </div>
           )}
         </FormShell.Body>
