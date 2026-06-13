@@ -112,13 +112,15 @@ async function getById(req, res, next) {
       [id]
     );
 
-    const workOrdersRes = await query(
-      `SELECT wo.*, wc.name AS work_center_name, wc.code AS work_center_code
-       FROM work_orders wo
-       JOIN work_centers wc ON wc.id = wo.work_center_id
-       WHERE wo.mo_id = $1 ORDER BY wo.sequence`,
-      [id]
-    );
+    const workOrdersRes = await query(`
+      SELECT wo.*, wc.name AS work_center, wc.capacity_per_hour,
+        (SELECT logged_at FROM work_order_time_logs 
+         WHERE work_order_id = wo.id AND action IN ('start', 'resume') 
+         ORDER BY logged_at DESC LIMIT 1) AS last_resume_at
+      FROM work_orders wo
+      JOIN work_centers wc ON wo.work_center_id = wc.id
+      WHERE wo.mo_id = $1 ORDER BY wo.sequence
+    `, [id]);
 
     const mo = moRes.rows[0];
     mo.components = componentsRes.rows.map(c => ({
@@ -297,24 +299,38 @@ async function woAction(req, res, next, actionType) {
         }
 
         await client.query(`UPDATE work_orders SET status = $1, started_at = COALESCE(started_at, NOW()) WHERE id = $2`, [nextWoStatus, woId]);
-      } else if (actionType === 'pause') {
-        assertTransition('WO', woRow.status, 'paused');
-        nextWoStatus = 'paused';
-        await client.query(`UPDATE work_orders SET status = $1 WHERE id = $2`, [nextWoStatus, woId]);
       } else if (actionType === 'resume') {
         assertTransition('WO', woRow.status, 'in_progress');
         nextWoStatus = 'in_progress';
         await client.query(`UPDATE work_orders SET status = $1 WHERE id = $2`, [nextWoStatus, woId]);
-      } else if (actionType === 'done') {
-        assertTransition('WO', woRow.status, 'done');
-        nextWoStatus = 'done';
-        await client.query(`UPDATE work_orders SET status = $1, completed_at = NOW() WHERE id = $2`, [nextWoStatus, woId]);
+      } else if (actionType === 'pause' || actionType === 'done') {
+        // Calculate added duration
+        const lastLogRes = await client.query(`
+          SELECT logged_at FROM work_order_time_logs 
+          WHERE work_order_id = $1 AND action IN ('start', 'resume')
+          ORDER BY logged_at DESC LIMIT 1
+        `, [woId]);
+        
+        let addedSecs = 0;
+        if (lastLogRes.rows.length > 0) {
+          addedSecs = Math.floor((new Date() - new Date(lastLogRes.rows[0].logged_at)) / 1000);
+        }
 
-        // Check if all WOs done
-        const allWo = await client.query('SELECT status FROM work_orders WHERE mo_id = $1', [id]);
-        if (allWo.rows.every(w => w.status === 'done')) {
-          nextMoStatus = 'to_close';
-          await client.query(`UPDATE manufacturing_orders SET status = 'to_close', updated_at = NOW() WHERE id = $1`, [id]);
+        if (actionType === 'pause') {
+          assertTransition('WO', woRow.status, 'paused');
+          nextWoStatus = 'paused';
+          await client.query(`UPDATE work_orders SET status = $1, real_duration_secs = real_duration_secs + $2 WHERE id = $3`, [nextWoStatus, addedSecs, woId]);
+        } else if (actionType === 'done') {
+          assertTransition('WO', woRow.status, 'done');
+          nextWoStatus = 'done';
+          await client.query(`UPDATE work_orders SET status = $1, completed_at = NOW(), real_duration_secs = real_duration_secs + $2 WHERE id = $3`, [nextWoStatus, addedSecs, woId]);
+
+          // Check if all WOs done
+          const allWo = await client.query('SELECT status FROM work_orders WHERE mo_id = $1', [id]);
+          if (allWo.rows.every(w => w.status === 'done')) {
+            nextMoStatus = 'to_close';
+            await client.query(`UPDATE manufacturing_orders SET status = 'to_close', updated_at = NOW() WHERE id = $1`, [id]);
+          }
         }
       }
 
