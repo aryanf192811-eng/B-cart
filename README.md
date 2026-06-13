@@ -1,7 +1,7 @@
 <div align="center">
   <h1>🏭 ForgeOps Mini ERP</h1>
-  <p><strong>A highly-performant, production-grade manufacturing ERP backend built for the Odoo Hackathon 2026.</strong></p>
-  
+  <p><strong>A highly-performant, AI-powered manufacturing ERP platform — orchestrate sales, automate procurement, schedule manufacturing, and trace supply chains with digital passports.</strong></p>
+
   [![Node.js](https://img.shields.io/badge/Node.js-20.x-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
   [![Express.js](https://img.shields.io/badge/Express.js-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
   [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15.x-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -9,111 +9,201 @@
   [![Gemini API](https://img.shields.io/badge/Google_Gemini-AI-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 </div>
 
-<hr>
+## 📋 Table of Contents
+- [Features](#-features)
+- [Architecture](#-architecture)
+- [Prerequisites](#-prerequisites)
+- [Quick Start](#-quick-start)
+- [Environment Variables](#-environment-variables)
+- [API Reference](#-api-reference)
+- [Project Structure](#-project-structure)
+- [Tech Stack](#-tech-stack)
+- [Contributing & Testing](#-contributing--testing)
 
-## 📖 Overview
+## ✨ Features
 
-ForgeOps Mini ERP is a robust, transactional backend system designed to orchestrate complex manufacturing supply chains. Built natively on **Node.js 20**, **Express 4**, and **PostgreSQL 15 (raw `pg` driver without ORM overhead)**, this architecture is optimized for low-latency, high-reliability operations. 
+| Feature | Description |
+|---|---|
+| 🛒 **Sales & Purchase** | Manage orders with strict transactional states. Validates stock before confirming. |
+| 🤖 **Procurement Engine** | Algorithmic logic auto-generates Purchase Orders (POs) and Manufacturing Orders (MOs) for shortages. |
+| 📦 **Immutable Stock Ledger** | Double-entry inspired append-only ledger (`IN`, `OUT`, `RESERVE`, `UNRESERVE`). No arbitrary updates. |
+| 🏭 **Manufacturing FSM** | Strict Finite State Machines (`draft → confirmed → in_progress → to_close → done`). |
+| 🛡️ **Digital Passports** | Complete backward traceability tracking exact raw materials, vendors, and batches. |
+| 📄 **Dynamic PDFs** | Live generation of Invoices, MO Worksheets, Passports, and Vendor ranking reports via `pdfkit`. |
+| 🧠 **AI Control Tower** | Gemini-powered assistant with live DB context (offline CSV-fallback integrated) + Risk Aggregator. |
+| 🔐 **Enterprise Auth & RBAC** | JWT auth + bcrypt with strict Role-Based Access Control mapped across 7 distinct operational modules. |
+| 💳 **Payments Integration** | Seamless Razorpay integration with HMAC signature verification for secure vendor payments. |
 
-It handles complete end-to-end operational life cycles: from Sales Order confirmation, algorithmic procurement, and automated manufacturing order (MO) scheduling, through to delivery and invoicing.
+## 🏗️ Architecture
 
-## 🏗 System Architecture & Key Engineering Decisions
-
-### 1. Zero-ORM, High-Performance Database Layer
-We eliminated ORM abstractions (like Prisma or Sequelize) in favor of raw SQL via `pg`. This allows us to leverage native PostgreSQL 15 features:
-- **Complex Aggregations & Views:** Intelligent reporting operates on SQL Views (`vendor_reliability_view`, `product_stock_view`, `work_center_load_view`) rather than costly in-memory application filters.
-- **Transactional Integrity (`BEGIN/COMMIT`):** All multi-step mutations strictly utilize a custom `withTransaction` wrapper, ensuring ACID compliance across concurrent state changes.
-- **Row-Level Locking:** We utilize `FOR UPDATE OF` during stock allocations and procurement checks to prevent race conditions during high-volume order processing.
-- **Advisory Locks:** Critical ID generation (like `PO-00001`) relies on `pg_advisory_xact_lock` guaranteeing sequential, gap-less identifiers even under distributed load.
-
-### 2. Append-Only Stock Ledger
-Inventory is managed via an immutable, double-entry inspired **Append-Only Stock Ledger**. `on_hand_qty` is **never updated arbitrarily**; every adjustment requires an `IN`, `OUT`, `RESERVE`, or `UNRESERVE` ledger entry. This ensures 100% auditable inventory traceability.
-
-### 3. Automated Procurement Engine
-The heart of the application is the algorithmic `Procurement Engine`. Upon confirming a Sales Order:
-- The system recursively evaluates the Bill of Materials (BoM).
-- Evaluates `free_to_use_qty` against current `RESERVE` requirements.
-- Automatically generates Draft Purchase Orders (POs) or Manufacturing Orders (MOs) for shortages based on the product's `procure_on_demand` flag.
-
-### 4. Finite State Machines (FSM)
-Transactional endpoints (Sales, Purchase, Manufacturing) enforce strict state transition logic (`assertTransition()`). A Work Order cannot be marked `done` if it isn't `in_progress`; an MO cannot be `produced` if dependent components lack sufficient stock.
-
-### 5. AI-Powered Control Tower & Chatbot
-- **Control Tower Aggregation:** A unified intelligence feed that aggregates low stock warnings, work center bottlenecks, supplier reliability risks, and delayed orders using a dynamic `UNION ALL` algorithm sorted by operational urgency.
-- **Offline-Capable Gemini Chatbot:** Integrates with `gemini-1.5-flash` passing dynamic DB context. Features an automated fallback mechanism: if the API is unreachable or keys are unconfigured, it seamlessly drops back to a deterministic CSV-backed keyword heuristic.
-
-### 6. Supply Chain Traceability & PDFs
-Generates on-the-fly, live-data PDFs using `pdfkit`:
-- **Digital Product Passports:** Complete backwards traceability tracking exact raw materials, source vendor POs, and batches used in finished goods.
-
----
-
-## 🚀 Quick Start Guide
-
-### Prerequisites
-- Node.js `v20.x`
-- PostgreSQL `v15.x`
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/aryanf192811-eng/B-cart.git
-   cd B-cart/backend
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment:**
-   Create a `.env` file referencing `.env.example`:
-   ```env
-   NODE_ENV=development
-   PORT=5000
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_USER=postgres
-   DB_PASSWORD=yourpassword
-   DB_NAME=mini_erp
-   JWT_SECRET=super_secret_forgeops
-   CORS_ORIGIN=http://localhost:3000
-   GEMINI_API_KEY=your_gemini_key
-   RAZORPAY_KEY_ID=your_razorpay_key
-   RAZORPAY_KEY_SECRET=your_razorpay_secret
-   ```
-
-4. **Initialize & Seed Database:**
-   Our seed script safely creates schemas, migrates views, and injects realistic, inter-connected Master Data to demonstrate the full application lifecycle.
-   ```bash
-   npm run seed
-   ```
-
-5. **Start Server:**
-   ```bash
-   npm run dev       # Development mode (nodemon)
-   # OR
-   npm start         # Production mode
-   ```
-
----
-
-## 🧪 Testing & Validation
-
-The backend enforces reliability through rigorous end-to-end transactional lifecycle tests ensuring 100% flow accuracy:
-
-```bash
-node test_transactions.js   # Verifies end-to-end SO -> PO -> MO flows & inventory math
-node test_final.js          # Validates intelligence, dashboard, PDF, and chat endpoints
+```text
+┌─────────────────────────────────────────────────────┐
+│                 Frontend (Coming Soon)              │
+│                React · Vite · Tailwind              │
+└──────────────────────────┬──────────────────────────┘
+                           │ REST API (JSON)
+                           │ JWT in HTTP-Only Cookies / Bearer
+┌──────────────────────────▼──────────────────────────┐
+│               Backend (Express + Node.js)           │
+│  State Machines · Procurement Engine · Audit Trails │
+│  pdfkit (PDF generation) · Socket.io (Realtime)     │
+│                  http://localhost:5000              │
+└──────────────────────────┬──────────────────────────┘
+                           │ pg (node-postgres)
+┌──────────────────────────▼──────────────────────────┐
+│                  PostgreSQL Database                │
+│   23 Tables · 4 Materialized Views · Raw SQL (No ORM)│
+└─────────────────────────────────────────────────────┘
 ```
 
-## 🔐 Security & Production Hardening
-- **RBAC (Role-Based Access Control):** Granular middleware verifying `user_module_access` across 7 modular boundaries.
-- **Global Audit Trail:** Every `INSERT`, `UPDATE`, `DELETE`, and state change is comprehensively logged (`middleware/audit.js`) identifying the user, target entity, and field changes.
-- **Helmet & Rate Limiting:** Security headers are enforced, and brute-force protection is applied via `express-rate-limit` on the authentication layer.
+**Key Engineering Decisions:**
+- **Zero-ORM Abstraction:** Utilizes raw `pg` queries. View aggregations push computation to the database layer for ultra-low latency.
+- **Concurrency Control:** Leverages PostgreSQL's `FOR UPDATE OF` locking and `pg_advisory_xact_lock` for safe generation of sequences (`PO-00001`) during concurrent traffic.
+- **Transactional Atomicity:** All multi-step supply chain operations utilize a custom `withTransaction` wrapper ensuring ACID guarantees.
 
-## 📄 License & Copyright
+## 🔧 Prerequisites
+- **Node.js** v20 or higher
+- **PostgreSQL** v15 or higher (`psql` in PATH)
+- **npm** v9+
+- A free **Google Gemini API key** (optional — AI chatbot has automatic offline CSV fallback)
+- **Razorpay API Keys** (optional — for payment endpoints)
 
-**Copyright © 2026 Aryanf192811-eng / ForgeOps.**  
-Released under the [MIT License](LICENSE).
+## 🚀 Quick Start
+
+### 1. Database Setup
+```bash
+# Create the database locally
+createdb mini_erp
+```
+
+### 2. Backend Initialization
+```bash
+cd backend
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env — set your DB_PASSWORD, JWT_SECRET, and API keys
+
+# Run migrations and inject Seed Data (Customers, Products, Bom, Ledger)
+npm run seed
+
+# Run the full 40+ E2E Transaction Validation Suite
+node test_transactions.js
+node test_final.js
+
+# Start production server (port 5000)
+npm start
+```
+*Verify:* `curl http://localhost:5000/api/health` → `{"status":"ok", "db": { "server_time": "..." }}`
+
+## 🔑 Environment Variables
+`backend/.env`
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `PORT` | No | `5000` | HTTP server port |
+| `DB_NAME` | Yes | `mini_erp` | PostgreSQL database name |
+| `JWT_SECRET` | Yes | — | Secret for signing JWTs (change in production!) |
+| `CORS_ORIGIN` | Yes | `http://localhost:3000` | Frontend origin for CORS |
+| `GEMINI_API_KEY` | No | `paste_here` | Required for AI chatbot |
+| `RAZORPAY_KEY_ID` | No | `paste_here` | Required for Purchase payments |
+
+> ⚠️ **Never commit `.env` files.** Use `.env.example` as the template.
+
+## 📡 API Reference
+
+*All responses use a consistent JSON envelope.*
+
+### Core Modules
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/auth/login` | No | Login, receive HttpOnly cookie JWT |
+| `GET` | `/api/sales` | Sales | List sales orders |
+| `POST` | `/api/sales/:id/confirm` | Sales | Confirm SO (auto-triggers Procurement Engine) |
+| `GET` | `/api/sales/:id/pdf` | Sales | Stream live Invoice PDF |
+| `POST` | `/api/purchase/:id/receive` | Purchase | Receive stock into Ledger |
+| `POST` | `/api/purchase/:id/pay` | Purchase | Create Razorpay order |
+| `POST` | `/api/manufacturing/:id/produce`| Mfg | Consume components, create finished goods |
+
+### Intelligence & Reports
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/intelligence/control-tower` | Valid | Aggregates critical risks (`STOCK_CRITICAL`, `BOTTLENECK`, etc.) |
+| `GET` | `/api/dashboard/kpis` | Valid | Consolidated stats for Sales, PO, MO, and Inventory |
+| `GET` | `/api/reports/stock/pdf` | Valid | Stream Stock Movement report |
+| `GET` | `/api/reports/vendor/pdf` | Valid | Stream Vendor Reliability report |
+| `POST` | `/api/chat` | Valid | Gemini chatbot + offline CSV fallback |
+
+## 📁 Project Structure
+
+```text
+backend/
+├── src/
+│   ├── app.js                # Express app, middleware, routes
+│   ├── config/               # Database pool, env parser
+│   ├── db/
+│   │   ├── migrations/       # SQL schemas + Materialized views
+│   │   └── seed.js           # Deterministic data injection
+│   ├── middleware/
+│   │   ├── auth.js           # JWT verification
+│   │   ├── rbac.js           # Granular module access
+│   │   └── audit.js          # Auto-logging for state mutations
+│   ├── modules/              # Domain-driven architecture
+│   │   ├── sales/            # SO lifecycle
+│   │   ├── purchase/         # PO lifecycle
+│   │   ├── manufacturing/    # MO & Work Orders
+│   │   ├── intelligence/     # Control Tower & BI Views
+│   │   └── ...               # (Passports, Chat, Dashboards, Audit)
+│   ├── services/
+│   │   ├── procurementEngine.js # Algorithmic shortfall detection
+│   │   ├── stateMachine.js   # FSM invariant enforcer
+│   │   └── stockLedger.js    # Immutable append-only core
+│   └── utils/                # PDF generation, Sequence locks
+├── test_transactions.js      # E2E Sales/Mfg testing orchestrator
+├── test_final.js             # Final Intelligence/PDF validator
+├── package.json
+└── .env.example
+```
+
+## 🛠️ Tech Stack
+
+### Backend
+| Package | Version | Purpose |
+|---|---|---|
+| `express` | `^4.22` | HTTP framework |
+| `pg` | `^8.21` | PostgreSQL client (raw SQL, zero-ORM) |
+| `socket.io` | `^4.8` | Real-time event broadcasting |
+| `pdfkit` | `^0.19` | Dynamic PDF generation |
+| `razorpay` | `^2.9` | Payment gateway |
+| `@google/generative-ai` | `^0.24` | Gemini AI integration |
+| `winston` | `^3.19` | Production-grade structured logging |
+
+## 🤝 Contributing & Testing
+
+**Running the Test Suites:**
+We use custom integration test runners to bypass heavy test frameworks and directly assert business logic constraints.
+```bash
+# Rebuild the DB and verify the transactional stock engine
+npm run seed && node test_transactions.js
+
+# Validate PDF generation, chat fallbacks, and control tower
+npm run seed && node test_final.js
+```
+
+### Common Issues
+| Error | Cause | Fix |
+|---|---|---|
+| `relation "sales_orders" does not exist` | Migrations not run | Run `npm run seed` first |
+| `PDF download corrupted` | Missing `responseType` | Add `{ responseType: 'blob' }` to axios frontend call |
+| `Invalid MO transition` | FSM constraint | You cannot `produce` an MO until it's `in_progress` |
+| `stock_ledger missing RESERVE row` | No free stock | Procurement engine auto-created a PO/MO instead |
+
+---
+
+<div align="center">
+  <i>Developed for the Odoo Hackathon 2026</i><br/>
+  <b>Copyright © 2026 Aryanf192811-eng / ForgeOps. Released under the MIT License.</b>
+</div>
