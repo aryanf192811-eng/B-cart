@@ -96,7 +96,7 @@ export default function BomForm({ mode }) {
               <FieldRow label="Finished Product">
                 <select {...form.register('product_id')} className="field">
                   <option value="">Select product...</option>
-                  {products?.filter(p => p.procurement_type === 'manufacturing' || p.procurementMethod === 'Manufacturing').map(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
+                  {products?.filter(p => p.procurement_type === 'manufacturing').map(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
                 </select>
               </FieldRow>
               <FieldRow label="Quantity Produced">

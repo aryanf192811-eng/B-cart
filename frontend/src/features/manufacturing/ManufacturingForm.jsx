@@ -232,7 +232,7 @@ export default function ManufacturingForm({ mode }) {
               <FieldRow label="Finished Product">
                 <select {...form.register('finishedProduct')} className="field" disabled={!isDraft}>
                   <option value="">Select product...</option>
-                  {products?.filter(p => p.procurementMethod === 'Manufacturing' || p.procurement_method === 'manufacturing').map(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
+                  {products?.filter(p => p.procurement_type === 'manufacturing').map(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
                 </select>
               </FieldRow>
               <FieldRow label="Quantity to Produce">
