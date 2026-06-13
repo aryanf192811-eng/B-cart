@@ -232,7 +232,7 @@ export default function ManufacturingForm({ mode }) {
               <FieldRow label="Finished Product">
                 <select {...form.register('finishedProduct')} className="field" disabled={!isDraft}>
                   <option value="">Select product...</option>
-                  {products?.filter(p => p.procurementMethod === 'Manufacturing').map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                  {products?.filter(p => p.procurementMethod === 'Manufacturing' || p.procurement_method === 'manufacturing').map(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
                 </select>
               </FieldRow>
               <FieldRow label="Quantity to Produce">
@@ -241,7 +241,7 @@ export default function ManufacturingForm({ mode }) {
               <FieldRow label="Bill of Materials">
                 <select {...form.register('billOfMaterials')} onChange={handleBomChange} className="field" disabled={!isDraft || !finishedProductId}>
                   <option value="">Select BoM...</option>
-                  {boms?.map(b => <option key={b._id} value={b._id}>{b.reference || 'BoM'}</option>)}
+                  {boms?.map(b => <option key={b.id || b._id} value={b.id || b._id}>{b.reference || 'BoM'}</option>)}
                 </select>
               </FieldRow>
               <FieldRow label="Schedule Date">
@@ -250,7 +250,7 @@ export default function ManufacturingForm({ mode }) {
               <FieldRow label="Assignee">
                 <select {...form.register('responsiblePerson')} className="field" disabled={!isDraft}>
                   <option value="">Select user...</option>
-                  {users?.map(u => <option key={u._id} value={u._id}>{u.name || u.full_name}</option>)}
+                  {users?.map(u => <option key={u.id || u._id} value={u.id || u._id}>{u.name || u.full_name}</option>)}
                 </select>
               </FieldRow>
             </FieldGrid>

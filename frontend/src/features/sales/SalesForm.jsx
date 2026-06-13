@@ -194,7 +194,7 @@ export default function SalesForm({ mode }) {
               <FieldRow label="Salesperson">
                 <select {...form.register('salesPerson')} className="field" disabled={!isDraft}>
                   <option value="">Select user...</option>
-                  {users?.map(u => <option key={u._id} value={u._id}>{u.name || u.full_name}</option>)}
+                  {users?.map(u => <option key={u.id || u._id} value={u.id || u._id}>{u.name || u.full_name}</option>)}
                 </select>
               </FieldRow>
               <FieldRow label="Creation Date">

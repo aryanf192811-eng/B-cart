@@ -21,7 +21,7 @@ export default function Chatbot({ isOpen, onClose }) {
     try {
       const res = await api.post(E.chat(), { message: userMsg });
       if (res.data.source && !source) setSource(res.data.source);
-      setMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: res.data.response || res.data.reply }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
     } finally {
@@ -49,7 +49,7 @@ export default function Chatbot({ isOpen, onClose }) {
         <div className="flex items-center gap-1.5 mt-1">
           <Bot size={12} className="text-rust" />
           <span className="font-mono text-[10px] tracking-wider text-steel uppercase">
-            {source === 'gemini' ? 'powered by Gemini' : (source ? 'offline mode · CSV fallback' : 'Ready')}
+            {source === 'groq' ? 'powered by Groq AI' : (source ? 'offline mode · JSON fallback' : 'Ready')}
           </span>
         </div>
       }
@@ -108,7 +108,7 @@ export default function Chatbot({ isOpen, onClose }) {
             onClick={downloadSnapshot}
             className="text-[11px] text-steel hover:text-ink text-left inline-flex items-center"
           >
-            Download snapshot.csv ↗
+            Download snapshot.json ↗
           </button>
         </div>
       </div>

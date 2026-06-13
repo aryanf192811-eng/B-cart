@@ -77,7 +77,7 @@ export const E = {
   auditStats: () => '/audit/stats',
   // Chat
   chat: () => '/chat',
-  chatSnapshot: () => '/chat/snapshot.csv',
+  chatSnapshot: () => '/chat/snapshot.json',
   // Reports
   reportStock: () => '/reports/stock/pdf',
   reportVendor: () => '/reports/vendor/pdf'
