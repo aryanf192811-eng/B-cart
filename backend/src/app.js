@@ -32,7 +32,9 @@ const reportsRoutes        = require('./modules/reports/reports.routes');
 const app = express();
 
 // ── Security & parsing ──────────────────────────────────────
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors({
   origin: env.corsOrigin || '*',
   credentials: true,
