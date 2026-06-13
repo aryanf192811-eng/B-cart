@@ -64,7 +64,7 @@ export default function PurchaseForm({ mode }) {
 
   const { data: auditLogs } = useQuery({
     queryKey: ['audit', 'purchase', id],
-    queryFn: async () => (await api.get(`/audit?entity_type=PurchaseOrder&entity_id=${id}`)).data,
+    queryFn: async () => (await api.get(`/audit?entity_type=PurchaseOrder&entity_id=${id}`)).data.rows || [],
     enabled: !isNew
   });
 
@@ -376,17 +376,17 @@ export default function PurchaseForm({ mode }) {
             <div className="mt-4">
               <div className="text-[11px] font-semibold text-steel uppercase mb-3 tracking-wider">Status Timeline</div>
               <div className="relative border-l-[0.5px] border-rule ml-2 space-y-4 pb-2">
-                {auditLogs.filter(a => a.action === 'Updated' && a.fieldChanged === 'status').map((log, idx) => (
+                {auditLogs.filter(a => a.action === 'Updated' && (a.fieldChanged === 'status' || a.field_name === 'status')).map((log, idx) => (
                   <div key={idx} className="relative pl-4">
                     <div className="absolute w-2 h-2 rounded-full bg-ink -left-[4.5px] top-[6px]"></div>
-                    <div className="text-[13px] text-ink capitalize">{log.newValue}</div>
-                    <div className="text-[11px] text-steel font-mono">{format(new Date(log.dateAndTime), 'dd MMM HH:mm')}</div>
+                    <div className="text-[13px] text-ink capitalize">{log.newValue || log.new_value}</div>
+                    <div className="text-[11px] text-steel font-mono">{format(new Date(log.dateAndTime || log.created_at || new Date()), 'dd MMM HH:mm')}</div>
                   </div>
                 ))}
                 <div className="relative pl-4">
                   <div className="absolute w-2 h-2 rounded-full bg-steel2 -left-[4.5px] top-[6px]"></div>
                   <div className="text-[13px] text-ink">Draft</div>
-                  <div className="text-[11px] text-steel font-mono">{format(new Date(po?.createdAt), 'dd MMM HH:mm')}</div>
+                  <div className="text-[11px] text-steel font-mono">{format(new Date(po?.created_at || po?.createdAt || new Date()), 'dd MMM HH:mm')}</div>
                 </div>
               </div>
             </div>
