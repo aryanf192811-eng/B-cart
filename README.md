@@ -38,8 +38,9 @@
 
 ```text
 ┌─────────────────────────────────────────────────────┐
-│                 Frontend (Coming Soon)              │
-│                React · Vite · Tailwind              │
+│               Frontend (React + Vite)               │
+│    TanStack Query · React Hook Form · TailwindCSS   │
+│                 http://localhost:5173               │
 └──────────────────────────┬──────────────────────────┘
                            │ REST API (JSON)
                            │ JWT in HTTP-Only Cookies / Bearer
@@ -95,9 +96,25 @@ node test_transactions.js
 node test_final.js
 
 # Start production server (port 5000)
-npm start
+npm run dev
 ```
 *Verify:* `curl http://localhost:5000/api/health` → `{"status":"ok", "db": { "server_time": "..." }}`
+
+### 3. Frontend Initialization
+Open a new terminal window:
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Default points to http://localhost:5000/api
+
+# Start dev server (port 5173)
+npm run dev
+```
 
 ## 🔑 Environment Variables
 `backend/.env`
@@ -140,32 +157,33 @@ npm start
 ## 📁 Project Structure
 
 ```text
-backend/
-├── src/
-│   ├── app.js                # Express app, middleware, routes
-│   ├── config/               # Database pool, env parser
-│   ├── db/
-│   │   ├── migrations/       # SQL schemas + Materialized views
-│   │   └── seed.js           # Deterministic data injection
-│   ├── middleware/
-│   │   ├── auth.js           # JWT verification
-│   │   ├── rbac.js           # Granular module access
-│   │   └── audit.js          # Auto-logging for state mutations
-│   ├── modules/              # Domain-driven architecture
-│   │   ├── sales/            # SO lifecycle
-│   │   ├── purchase/         # PO lifecycle
-│   │   ├── manufacturing/    # MO & Work Orders
-│   │   ├── intelligence/     # Control Tower & BI Views
-│   │   └── ...               # (Passports, Chat, Dashboards, Audit)
-│   ├── services/
-│   │   ├── procurementEngine.js # Algorithmic shortfall detection
-│   │   ├── stateMachine.js   # FSM invariant enforcer
-│   │   └── stockLedger.js    # Immutable append-only core
-│   └── utils/                # PDF generation, Sequence locks
-├── test_transactions.js      # E2E Sales/Mfg testing orchestrator
-├── test_final.js             # Final Intelligence/PDF validator
-├── package.json
-└── .env.example
+b-cart/
+├── backend/
+│   ├── src/
+│   │   ├── app.js                # Express app, middleware, routes
+│   │   ├── config/               # Database pool, env parser
+│   │   ├── db/
+│   │   │   ├── migrations/       # SQL schemas + Materialized views
+│   │   │   └── seed.js           # Deterministic data injection
+│   │   ├── middleware/           # Auth, RBAC, Audit
+│   │   ├── modules/              # Domain-driven architecture (Sales, Purchase, Mfg, etc.)
+│   │   ├── services/             # Procurement Engine, State Machine, Stock Ledger
+│   │   └── utils/                # PDF generation, Sequence locks
+│   ├── test_transactions.js      # E2E Sales/Mfg testing orchestrator
+│   ├── package.json
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── api/                  # Axios client, endpoints definitions
+│   │   ├── components/           # Reusable UI components (DataTable, FormShell, Modals)
+│   │   ├── features/             # Feature-based architecture (sales, purchase, inventory)
+│   │   ├── pages/                # High-level layouts (Dashboard, Settings)
+│   │   ├── store/                # Zustand / Context state management
+│   │   ├── App.jsx               # React Router configuration
+│   │   └── index.css             # Tailwind imports
+│   ├── package.json
+│   ├── tailwind.config.js
+│   └── vite.config.js
 ```
 
 ## 🛠️ Tech Stack
