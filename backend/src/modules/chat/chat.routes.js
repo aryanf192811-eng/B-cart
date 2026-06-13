@@ -18,13 +18,13 @@ function generateJson(ctx) {
 }
 
 async function buildContext() {
-  const [productsRes, lowStockRes, openSoRes, openMoRes, openPoRes, topVendorsRes, alertsRes] = await Promise.all([
+  const [productsRes, lowStockRes, openSoRes, openMoRes, openPoRes, topVendorsRes, alertsRes, workCentersRes] = await Promise.all([
     query(`SELECT id, name, sku, on_hand_qty, free_to_use_qty, min_stock_qty, unit FROM product_stock_view LIMIT 50`),
     query(`SELECT id, name, sku, on_hand_qty, unit FROM product_stock_view WHERE is_low_stock = true`),
     query(`SELECT status, COUNT(*) AS cnt FROM sales_orders GROUP BY status`),
     query(`SELECT status, COUNT(*) AS cnt FROM manufacturing_orders GROUP BY status`),
     query(`SELECT status, COUNT(*) AS cnt FROM purchase_orders GROUP BY status`),
-    query(`SELECT name, reliability_score FROM vendor_reliability_view LIMIT 5`),
+    query(`SELECT name, reliability_score FROM vendor_reliability_view ORDER BY reliability_score DESC NULLS LAST LIMIT 5`),
     query(`
       SELECT 'STOCK_CRITICAL' AS alert_type, p.name AS message
       FROM products p WHERE p.on_hand_qty < p.min_stock_qty AND p.is_active = true
@@ -33,6 +33,7 @@ async function buildContext() {
       FROM sales_orders so WHERE so.status='confirmed' AND so.confirmed_at < NOW()-INTERVAL '3 days'
       LIMIT 10
     `),
+    query(`SELECT name, capacity_per_hour FROM work_centers`)
   ]);
 
   return {
@@ -43,6 +44,7 @@ async function buildContext() {
     openPO: openPoRes.rows,
     topVendors: topVendorsRes.rows,
     alerts: alertsRes.rows,
+    workCenters: workCentersRes.rows
   };
 }
 
@@ -62,7 +64,11 @@ router.post('/',
 
       if (useGroq) {
         const groq = new Groq({ apiKey });
-        const systemPrompt = `You are the assistant for B-cart for Shiv Furniture Works. Answer using ONLY the LIVE_CONTEXT below. If asked a question that needs data not in context, say so. Be concise, use ₹ for prices, never invent SKUs or numbers.
+        const systemPrompt = `You are the operations assistant for B-cart, an ERP system for Shiv Furniture Works.
+Answer using ONLY the LIVE_CONTEXT below.
+If asked a question that needs data not in context, politely say that you don't have access to that information right now.
+Provide highly analytical and concise responses. Use ₹ for prices. Never invent SKUs or numbers.
+You have context regarding inventory levels, active orders (sales, manufacturing, purchase), top vendors, active alerts, and work centers. Use this data to help the user understand their operations.
 
 LIVE_CONTEXT: ${JSON.stringify(ctx)}`;
 
@@ -105,16 +111,17 @@ LIVE_CONTEXT: ${JSON.stringify(ctx)}`;
         reply = `Top vendors by reliability: ${ctx.topVendors.map(v => `${v.name} (${v.reliability_score}%)`).join(', ')}`;
       } else if (text.includes('alert') || text.includes('issue')) {
         reply = ctx.alerts.length ? ctx.alerts.map(a => `• [${a.alert_type}] ${a.message}`).join('\n') : 'No active alerts.';
-      } else if (text.includes('stock') || text.includes('inventory')) {
-        reply = `Total products: ${ctx.products.length}. Low stock items: ${ctx.lowStock.length}. Snapshot saved to /api/chat/snapshot.json.`;
-      } else if (text.includes('order') || text.includes('sales')) {
-        const soStr = ctx.openSO.map(s => `${s.status}: ${s.cnt}`).join(', ');
-        reply = `Sales orders by status — ${soStr}.`;
-      } else if (text.includes('manufactur') || text.includes('production')) {
-        const moStr = ctx.openMO.map(m => `${m.status}: ${m.cnt}`).join(', ');
-        reply = `Manufacturing orders by status — ${moStr}.`;
+      } else if (text.includes('stock') || text.includes('inventory') || text.includes('product')) {
+        reply = `Total products in system: ${ctx.products.length}. Low stock items: ${ctx.lowStock.length}. We currently have ${ctx.alerts.filter(a => a.alert_type === 'STOCK_CRITICAL').length} critical stock alerts.`;
+      } else if (text.includes('order') || text.includes('sales') || text.includes('purchase')) {
+        const soStr = ctx.openSO.map(s => `${s.status}: ${s.cnt}`).join(', ') || 'None';
+        const poStr = ctx.openPO.map(s => `${s.status}: ${s.cnt}`).join(', ') || 'None';
+        reply = `Sales orders by status: ${soStr}. Purchase orders by status: ${poStr}.`;
+      } else if (text.includes('manufactur') || text.includes('production') || text.includes('mo')) {
+        const moStr = ctx.openMO.map(m => `${m.status}: ${m.cnt}`).join(', ') || 'None';
+        reply = `Manufacturing orders by status: ${moStr}. Active work centers: ${ctx.workCenters.map(w => `${w.name} (${w.capacity_per_hour}/hr)`).join(', ')}.`;
       } else {
-        reply = `I'm running in offline mode (no Groq API key configured). Snapshot JSON available at /api/chat/snapshot.json. Try asking about low stock, vendors, alerts, orders, or inventory.`;
+        reply = `I'm running in offline mode (no Groq API key configured). Snapshot JSON available at /api/chat/snapshot.json. Try asking about:\n- Low stock items\n- Best vendors\n- Alerts and issues\n- Inventory overview\n- Sales & Purchase orders\n- Manufacturing capacity & active orders`;
       }
 
       return res.json({ response: reply, source: 'json_fallback' });
