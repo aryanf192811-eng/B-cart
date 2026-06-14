@@ -25,7 +25,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 /* ── API base URL — adjust to match your .env variable ── */
-const API_BASE = import.meta.env.VITE_API_URL || "";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 /* Examples:
    const API_BASE = "http://localhost:3000/api";
    const API_BASE = import.meta.env.VITE_API_URL + "/api";
