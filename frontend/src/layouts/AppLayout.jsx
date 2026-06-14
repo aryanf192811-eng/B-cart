@@ -322,6 +322,8 @@ export default function AppLayout() {
                 e.target.style.boxShadow = 'none';
                 e.target.style.background = 'var(--surface-container-low)';
               }}
+              onClick={() => setIsCmdOpen(true)}
+              onChange={() => setIsCmdOpen(true)}
               onKeyDown={e => { if (e.metaKey && e.key === 'k') { e.preventDefault(); setIsCmdOpen(true); } }}
             />
             <div style={{

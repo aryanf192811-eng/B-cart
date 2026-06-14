@@ -64,10 +64,10 @@ export default function CommandPalette({ isOpen, onClose }) {
           api.get(`${E.mo()}?search=${query}&limit=5`)
         ]);
         setResults({
-          products: p.data.slice(0,5),
-          sales: s.data.slice(0,5),
-          purchase: pu.data.slice(0,5),
-          manufacturing: m.data.slice(0,5)
+          products: (p.data.rows || p.data || []).slice(0,5),
+          sales: (s.data.rows || s.data || []).slice(0,5),
+          purchase: (pu.data.rows || pu.data || []).slice(0,5),
+          manufacturing: (m.data.rows || m.data || []).slice(0,5)
         });
         setActiveIndex(0);
       } catch (err) {
@@ -82,10 +82,10 @@ export default function CommandPalette({ isOpen, onClose }) {
 
   const getFlatResults = () => {
     return [
-      ...results.products.map(r => ({ ...r, type: 'Product', link: `/products/${r._id||r.id}`, title: r.name, sub: r.sku })),
-      ...results.sales.map(r => ({ ...r, type: 'Sales', link: `/sales/${r._id||r.id}`, title: r.soNumber, sub: r.customerName })),
-      ...results.purchase.map(r => ({ ...r, type: 'Purchase', link: `/purchase/${r._id||r.id}`, title: r.poNumber, sub: r.vendorName })),
-      ...results.manufacturing.map(r => ({ ...r, type: 'Manufacturing', link: `/manufacturing/${r._id||r.id}`, title: r.moNumber, sub: r.finishedProduct?.name }))
+      ...results.products.map(r => ({ ...r, type: 'Product', link: `/products/${r.id}`, title: r.name, sub: r.sku })),
+      ...results.sales.map(r => ({ ...r, type: 'Sales', link: `/sales/${r.id}`, title: r.so_number, sub: r.customer_name })),
+      ...results.purchase.map(r => ({ ...r, type: 'Purchase', link: `/purchase/${r.id}`, title: r.po_number, sub: r.vendor_name })),
+      ...results.manufacturing.map(r => ({ ...r, type: 'Manufacturing', link: `/manufacturing/${r.id}`, title: r.mo_number, sub: r.product_name }))
     ];
   };
 
