@@ -58,9 +58,9 @@ export default function VendorScores() {
                   <td className="px-4 py-3 font-mono">{i + 1}</td>
                   <td className="px-4 py-3 font-medium text-ink">{v.name}</td>
                   <td className="px-4 py-3 font-mono text-right">{v.total_orders}</td>
-                  <td className="px-4 py-3 font-mono text-right">{Math.round(v.on_time_percentage)}%</td>
-                  <td className="px-4 py-3 font-mono text-right">{Math.round(v.fulfillment_percentage)}%</td>
-                  <td className="px-4 py-3 font-mono text-right">{Math.round(v.reliability_score)}%</td>
+                  <td className="px-4 py-3 font-mono text-right">{Math.round(v.on_time_rate)}%</td>
+                  <td className="px-4 py-3 font-mono text-right">{Math.round(v.fulfillment_rate)}%</td>
+                  <td className="px-4 py-3 font-mono text-right">{Math.round(v.quality_rate)}%</td>
                   <td className="px-4 py-3 font-mono text-right font-bold text-ink">{Math.round(v.reliability_score)}</td>
                 </tr>
               );
