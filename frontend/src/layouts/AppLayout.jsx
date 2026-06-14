@@ -24,29 +24,29 @@ const NAV_CONFIG = [
   {
     label: 'TRANSACTIONS',
     items: [
-      { name: 'Sales', icon: ShoppingCart, path: '/sales' },
-      { name: 'Purchase', icon: Truck, path: '/purchase' },
-      { name: 'Manufacturing', icon: Factory, path: '/manufacturing' }
+      { name: 'Sales', icon: ShoppingCart, path: '/sales', module: 'Sales' },
+      { name: 'Purchase', icon: Truck, path: '/purchase', module: 'Purchase' },
+      { name: 'Manufacturing', icon: Factory, path: '/manufacturing', module: 'Manufacturing' }
     ]
   },
   {
     label: 'MASTER DATA',
     items: [
-      { name: 'Products', icon: Package, path: '/products' },
-      { name: 'Bills of Materials', icon: FileText, path: '/bom' },
-      { name: 'Vendors', icon: Building2, path: '/vendors' },
-      { name: 'Customers', icon: UserCircle, path: '/customers' },
-      { name: 'Work Centers', icon: Cog, path: '/work-centers' }
+      { name: 'Products', icon: Package, path: '/products', module: 'Product' },
+      { name: 'Bills of Materials', icon: FileText, path: '/bom', module: 'BoM' },
+      { name: 'Vendors', icon: Building2, path: '/vendors', module: 'Purchase' },
+      { name: 'Customers', icon: UserCircle, path: '/customers', module: 'Sales' },
+      { name: 'Work Centers', icon: Cog, path: '/work-centers', module: 'Manufacturing' }
     ]
   },
   {
     label: 'INTELLIGENCE',
     items: [
-      { name: 'Smart Procurement', icon: LineChart, path: '/intelligence/procurement' },
-      { name: 'Vendor Scores', icon: Award, path: '/intelligence/vendors' },
-      { name: 'Bottleneck Radar', icon: Activity, path: '/intelligence/bottlenecks' },
-      { name: 'Stock Ledger', icon: Layers, path: '/inventory' },
-      { name: 'Product Passports', icon: BadgeCheck, path: '/passports' }
+      { name: 'Smart Procurement', icon: LineChart, path: '/intelligence/procurement', module: 'Purchase' },
+      { name: 'Vendor Scores', icon: Award, path: '/intelligence/vendors', module: 'Purchase' },
+      { name: 'Bottleneck Radar', icon: Activity, path: '/intelligence/bottlenecks', module: 'Manufacturing' },
+      { name: 'Stock Ledger', icon: Layers, path: '/inventory', module: 'Inventory' },
+      { name: 'Product Passports', icon: BadgeCheck, path: '/passports', module: 'Manufacturing' }
     ]
   }
 ];
@@ -157,24 +157,28 @@ export default function AppLayout() {
 
         {/* Nav scroll area */}
         <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '8px 0' }}>
-          {NAV_CONFIG.map((group, idx) => (
-            <div key={idx} style={{ marginBottom: '2px' }}>
-              <div style={{
-                fontFamily: 'var(--font-sans)',
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'var(--outline)',
-                padding: idx === 0 ? '6px 20px 5px' : '14px 20px 5px',
-                borderTop: idx > 0 ? '1px solid var(--outline-variant)' : 'none',
-                marginTop: idx > 0 ? '6px' : 0,
-              }}>
-                {group.label}
+          {NAV_CONFIG.map((group, idx) => {
+            const visibleItems = group.items.filter(item => !item.module || useAuth.getState().hasAccess(item.module));
+            if (visibleItems.length === 0) return null;
+            return (
+              <div key={idx} style={{ marginBottom: '2px' }}>
+                <div style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--outline)',
+                  padding: idx === 0 ? '6px 20px 5px' : '14px 20px 5px',
+                  borderTop: idx > 0 ? '1px solid var(--outline-variant)' : 'none',
+                  marginTop: idx > 0 ? '6px' : 0,
+                }}>
+                  {group.label}
+                </div>
+                {visibleItems.map(item => <NavItem key={item.path} item={item} />)}
               </div>
-              {group.items.map(item => <NavItem key={item.path} item={item} />)}
-            </div>
-          ))}
+            );
+          })}
 
           {/* Admin section */}
           {user?.role === 'Admin' && (

@@ -79,8 +79,14 @@ async function getById(req, res, next) {
       [id]
     );
 
+    const imagesResult = await query(
+      'SELECT id, url, is_primary, created_at FROM product_images WHERE product_id = $1 ORDER BY created_at ASC',
+      [id]
+    );
+
     const product = result.rows[0];
     product.bom_count = parseInt(bomCount.rows[0].cnt);
+    product.images = imagesResult.rows;
 
     res.json({ product });
   } catch (err) {
@@ -101,14 +107,13 @@ async function create(req, res, next) {
       const { rows } = await client.query(
         `INSERT INTO products
            (sku, name, category_id, unit, sales_price, cost_price,
-            on_hand_qty, min_stock_qty, lead_time_days,
+            min_stock_qty, lead_time_days,
             procure_on_demand, procurement_type, default_vendor_id, default_bom_id)
-         VALUES ($1,$2,$3,$4,$5,$6, $7,$8,$9,$10,$11,$12,$13)
+         VALUES ($1,$2,$3,$4,$5,$6, $7,$8,$9,$10,$11,$12)
          RETURNING *`,
         [
           sku, name, category_id || null, unit || 'Units',
           sales_price || 0, cost_price || 0,
-          0, // always start at 0 — opening stock via ledger
           min_stock_qty || 0, lead_time_days || 7,
           procure_on_demand || false, procurement_type || null,
           default_vendor_id || null, default_bom_id || null,
@@ -377,23 +382,91 @@ async function uploadImage(req, res, next) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
     const { id } = req.params;
-    const image_url = `/uploads/products/${req.file.filename}`;
+    const url = `/uploads/products/${req.file.filename}`;
 
-    const result = await query(
-      'UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2 RETURNING id, sku, image_url',
-      [image_url, id]
-    );
+    const { rows: existing } = await query('SELECT COUNT(*) AS cnt FROM product_images WHERE product_id = $1', [id]);
+    const isFirst = parseInt(existing[0].cnt) === 0;
 
-    if (result.rows.length === 0) {
+    await withTransaction(async (client) => {
+      // Insert into product_images
+      await client.query(
+        'INSERT INTO product_images (product_id, url, is_primary) VALUES ($1, $2, $3)',
+        [id, url, isFirst]
+      );
+
+      // If it is primary, denormalize to products table
+      if (isFirst) {
+        await client.query('UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2', [url, id]);
+      }
+    });
+
+    // Fetch the updated product
+    const { rows } = await query('SELECT * FROM product_stock_view WHERE id = $1', [id]);
+
+    if (rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
     emitSocket(req, 'product:updated', { id: parseInt(id) });
-    res.json({ ok: true, image_url, product: result.rows[0] });
+    res.json({ ok: true, image_url: url, product: rows[0] });
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = { list, getById, create, update, remove, inventoryBreakdown, uploadImage };
+// ── GET /api/products/:id/traceability ─────────────────────
+async function getTraceability(req, res, next) {
+  try {
+    const { id } = req.params;
+    
+    const { rows: pRows } = await query('SELECT name, on_hand_qty FROM product_stock_view WHERE id = $1', [id]);
+    if (pRows.length === 0) return res.status(404).json({ error: 'Product not found' });
+    
+    const product = pRows[0];
+    const currentQty = parseFloat(product.on_hand_qty);
+
+    // FIFO approximation for current stock sources
+    const { rows: ledgerRows } = await query(`
+      SELECT move_type, qty, reference_type, reference_number, created_at, notes
+      FROM stock_ledger
+      WHERE product_id = $1 AND move_type IN ('IN', 'ADJUST') AND qty > 0
+      ORDER BY created_at DESC
+    `, [id]);
+
+    let accumulated = 0;
+    const sources = [];
+
+    for (const row of ledgerRows) {
+      if (accumulated >= currentQty) break;
+      const moveQty = parseFloat(row.qty);
+      const needed = currentQty - accumulated;
+      const attributedQty = Math.min(moveQty, needed);
+      
+      sources.push({
+        ...row,
+        attributed_qty: attributedQty
+      });
+      accumulated += attributedQty;
+    }
+
+    // Consumers (Recent OUT moves)
+    const { rows: consumers } = await query(`
+      SELECT move_type, qty, reference_type, reference_number, created_at
+      FROM stock_ledger
+      WHERE product_id = $1 AND move_type = 'OUT'
+      ORDER BY created_at DESC
+      LIMIT 10
+    `, [id]);
+
+    res.json({
+      product_id: id,
+      product_name: product.name,
+      current_stock: currentQty,
+      sources,
+      consumers
+    });
+  } catch (err) { next(err); }
+}
+
+module.exports = { list, getById, create, update, remove, inventoryBreakdown, uploadImage, getTraceability };
 

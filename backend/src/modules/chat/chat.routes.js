@@ -27,7 +27,9 @@ async function buildContext() {
     query(`SELECT name, reliability_score FROM vendor_reliability_view ORDER BY reliability_score DESC NULLS LAST LIMIT 5`),
     query(`
       SELECT 'STOCK_CRITICAL' AS alert_type, p.name AS message
-      FROM products p WHERE p.on_hand_qty < p.min_stock_qty AND p.is_active = true
+      FROM products p 
+      LEFT JOIN product_stock_view psv ON psv.id = p.id
+      WHERE psv.on_hand_qty < p.min_stock_qty AND p.is_active = true
       UNION ALL
       SELECT 'DELAYED_ORDER', so.so_number
       FROM sales_orders so WHERE so.status='confirmed' AND so.confirmed_at < NOW()-INTERVAL '3 days'

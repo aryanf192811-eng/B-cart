@@ -3,7 +3,7 @@ const { auditLog, diffAndAudit } = require('../../middleware/audit');
 const { nextNumber } = require('../../utils/sequence');
 const { writeStockMove } = require('../../services/stockLedger');
 const { assertTransition } = require('../../services/stateMachine');
-const { runProcurement } = require('../../services/procurementEngine');
+const { publishEvent } = require('../../events/eventBus');
 const { streamPDF, header, kv, drawTable, footer } = require('../../utils/pdf');
 
 function emitSocket(req, event, data) {
@@ -49,7 +49,7 @@ async function list(req, res, next) {
     const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
 
     const countRes = await query(
-      `SELECT COUNT(*) AS total FROM sales_orders so
+      `SELECT COUNT(*) AS total FROM sales_order_view so
        LEFT JOIN customers c ON c.id = so.customer_id ${where}`,
       params
     );
@@ -57,7 +57,7 @@ async function list(req, res, next) {
 
     const dataRes = await query(
       `SELECT so.*, c.name AS customer_name, u.full_name AS salesperson_name
-       FROM sales_orders so
+       FROM sales_order_view so
        LEFT JOIN customers c ON c.id = so.customer_id
        LEFT JOIN users u ON u.id = so.salesperson_id
        ${where}
@@ -95,7 +95,7 @@ async function getById(req, res, next) {
     const { id } = req.params;
     const soRes = await query(
       `SELECT so.*, c.name AS customer_name, u.full_name AS salesperson_name
-       FROM sales_orders so
+       FROM sales_order_view so
        LEFT JOIN customers c ON c.id = so.customer_id
        LEFT JOIN users u ON u.id = so.salesperson_id
        WHERE so.id = $1`,
@@ -105,7 +105,7 @@ async function getById(req, res, next) {
 
     const linesRes = await query(
       `SELECT sl.*, p.name AS product_name, p.sku AS product_sku,
-              p.on_hand_qty, COALESCE(psv.free_to_use_qty, 0) AS free_to_use_qty
+              psv.on_hand_qty, COALESCE(psv.free_to_use_qty, 0) AS free_to_use_qty
        FROM so_lines sl
        JOIN products p ON p.id = sl.product_id
        LEFT JOIN product_stock_view psv ON psv.id = sl.product_id
@@ -137,9 +137,9 @@ async function create(req, res, next) {
       }
 
       const { rows } = await client.query(
-        `INSERT INTO sales_orders (so_number, customer_id, salesperson_id, status, total_amount, created_by)
-         VALUES ($1, $2, $3, 'draft', $4, $5) RETURNING *`,
-        [soNumber, customer_id, salesperson_id || req.user.id, totalAmount, req.user.id]
+        `INSERT INTO sales_orders (so_number, customer_id, salesperson_id, status, created_by)
+         VALUES ($1, $2, $3, 'draft', $4) RETURNING *`,
+        [soNumber, customer_id, salesperson_id || req.user.id, req.user.id]
       );
       const soRow = rows[0];
 
@@ -190,10 +190,9 @@ async function update(req, res, next) {
         `UPDATE sales_orders SET
            customer_id = COALESCE($1, customer_id),
            salesperson_id = COALESCE($2, salesperson_id),
-           total_amount = $3,
            updated_at = NOW()
-         WHERE id = $4 RETURNING *`,
-        [customer_id, salesperson_id, totalAmount, id]
+         WHERE id = $3 RETURNING *`,
+        [customer_id, salesperson_id, id]
       );
       const soRow = rows[0];
 
@@ -238,18 +237,19 @@ async function confirm(req, res, next) {
          WHERE id = $1`, [id]
       );
 
-      const summary = await runProcurement(client, req, { soId: id });
-
       await auditLog(req, {
         module: 'Sales', action: 'Status_Changed', entityType: 'sales_order',
         entityId: id, entityRef: soRow.so_number, oldValue: soRow.status, newValue: 'confirmed'
       });
 
-      return { soNumber: soRow.so_number, summary };
+      // Publish event asynchronously via Outbox inside the transaction
+      await publishEvent(client, 'SalesOrderConfirmed', { soId: id, userId: req.user.id });
+
+      return { soNumber: soRow.so_number };
     });
 
     emitSocket(req, 'sales:confirmed', { id });
-    res.json({ ok: true, confirmed: true, procurement_summary: result.summary });
+    res.json({ ok: true, confirmed: true, procurement_summary: "Procurement triggered in background" });
   } catch (err) { next(err); }
 }
 
@@ -355,20 +355,24 @@ async function cancel(req, res, next) {
       assertTransition('SO', soRow.status, 'cancelled');
 
       if (['confirmed', 'partially_delivered'].includes(soRow.status)) {
-        const lines = await client.query('SELECT * FROM so_lines WHERE so_id = $1', [id]);
-        for (const line of lines.rows) {
-          const resQuery = await client.query(`
-            SELECT 
-              COALESCE(SUM(CASE WHEN move_type = 'RESERVE' THEN qty ELSE 0 END), 0) -
-              COALESCE(SUM(CASE WHEN move_type = 'UNRESERVE' THEN qty ELSE 0 END), 0) AS currently_reserved
-            FROM stock_ledger 
-            WHERE reference_type = 'SO' AND reference_id = $1
-          `, [line.id]);
-          const currentlyReserved = parseFloat(resQuery.rows[0].currently_reserved);
+        const { rows: linesWithRes } = await client.query(`
+          SELECT sl.*,
+            COALESCE(
+              (SELECT COALESCE(SUM(CASE WHEN move_type = 'RESERVE' THEN qty ELSE 0 END), 0) -
+                      COALESCE(SUM(CASE WHEN move_type = 'UNRESERVE' THEN qty ELSE 0 END), 0)
+               FROM stock_ledger
+               WHERE reference_type = 'SO' AND reference_id = sl.id
+              ), 0
+            ) AS currently_reserved
+          FROM so_lines sl
+          WHERE sl.so_id = $1
+        `, [id]);
 
+        for (const line of linesWithRes) {
+          const currentlyReserved = parseFloat(line.currently_reserved);
           const pendingToDeliver = parseFloat(line.qty_ordered) - parseFloat(line.qty_delivered);
           const unreserveQty = Math.min(pendingToDeliver, currentlyReserved);
-          
+
           if (unreserveQty > 0) {
             await writeStockMove(client, {
               productId: line.product_id, moveType: 'UNRESERVE', qty: unreserveQty,

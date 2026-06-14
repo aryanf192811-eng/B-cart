@@ -6,6 +6,9 @@ const ctrl = require('./auth.controller');
 
 const router = Router();
 
+// GET /api/auth/roles
+router.get('/roles', ctrl.getRoles);
+
 // POST /api/auth/signup
 router.post(
   '/signup',
@@ -14,8 +17,8 @@ router.post(
       .trim()
       .isLength({ min: 3, max: 20 })
       .withMessage('login_id must be 3-20 characters')
-      .matches(/^[a-zA-Z0-9_]+$/)
-      .withMessage('login_id must be alphanumeric or underscore'),
+      .matches(/^[a-zA-Z0-9_\-]+$/)
+      .withMessage('login_id must be alphanumeric, underscore, or hyphen'),
     body('email')
       .trim()
       .isEmail()
@@ -36,6 +39,25 @@ router.post(
       .withMessage('full_name must be 2-100 characters'),
   ]),
   ctrl.signup
+);
+
+// POST /api/auth/verify-otp
+router.post(
+  '/verify-otp',
+  validate([
+    body('login_id').trim().notEmpty().withMessage('login_id is required'),
+    body('otp_code').trim().notEmpty().withMessage('otp_code is required'),
+  ]),
+  ctrl.verifyOtp
+);
+
+// POST /api/auth/resend-otp
+router.post(
+  '/resend-otp',
+  validate([
+    body('login_id').trim().notEmpty().withMessage('login_id is required'),
+  ]),
+  ctrl.resendOtp
 );
 
 // POST /api/auth/login

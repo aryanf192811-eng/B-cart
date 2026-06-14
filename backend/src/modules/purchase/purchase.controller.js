@@ -3,6 +3,7 @@ const { auditLog } = require('../../middleware/audit');
 const { nextNumber } = require('../../utils/sequence');
 const { writeStockMove } = require('../../services/stockLedger');
 const { assertTransition } = require('../../services/stateMachine');
+const { applyWeightedMovingAverage } = require('../../services/valuationEngine');
 const { streamPDF, header, kv, drawTable, footer } = require('../../utils/pdf');
 
 // Razorpay
@@ -58,7 +59,7 @@ async function list(req, res, next) {
     const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
 
     const countRes = await query(
-      `SELECT COUNT(*) AS total FROM purchase_orders po
+      `SELECT COUNT(*) AS total FROM purchase_order_view po
        LEFT JOIN vendors v ON v.id = po.vendor_id ${where}`,
       params
     );
@@ -66,7 +67,7 @@ async function list(req, res, next) {
 
     const dataRes = await query(
       `SELECT po.*, v.name AS vendor_name, u.full_name AS responsible_name
-       FROM purchase_orders po
+       FROM purchase_order_view po
        LEFT JOIN vendors v ON v.id = po.vendor_id
        LEFT JOIN users u ON u.id = po.responsible_id
        ${where}
@@ -104,7 +105,7 @@ async function getById(req, res, next) {
     const { id } = req.params;
     const poRes = await query(
       `SELECT po.*, v.name AS vendor_name, u.full_name AS responsible_name
-       FROM purchase_orders po
+       FROM purchase_order_view po
        LEFT JOIN vendors v ON v.id = po.vendor_id
        LEFT JOIN users u ON u.id = po.responsible_id
        WHERE po.id = $1`,
@@ -141,9 +142,9 @@ async function create(req, res, next) {
       }
 
       const { rows } = await client.query(
-        `INSERT INTO purchase_orders (po_number, vendor_id, responsible_id, expected_delivery_date, status, total_amount, created_by)
-         VALUES ($1, $2, $3, $4, 'draft', $5, $6) RETURNING *`,
-        [poNumber, vendor_id, responsible_id || req.user.id, expected_delivery_date || null, totalAmount, req.user.id]
+        `INSERT INTO purchase_orders (po_number, vendor_id, responsible_id, expected_delivery_date, status, created_by)
+         VALUES ($1, $2, $3, $4, 'draft', $5) RETURNING *`,
+        [poNumber, vendor_id, responsible_id || req.user.id, expected_delivery_date || null, req.user.id]
       );
       const poRow = rows[0];
 
@@ -195,10 +196,9 @@ async function update(req, res, next) {
            vendor_id = COALESCE($1, vendor_id),
            responsible_id = COALESCE($2, responsible_id),
            expected_delivery_date = COALESCE($3, expected_delivery_date),
-           total_amount = $4,
            updated_at = NOW()
-         WHERE id = $5 RETURNING *`,
-        [vendor_id, responsible_id, expected_delivery_date, totalAmount, id]
+         WHERE id = $4 RETURNING *`,
+        [vendor_id, responsible_id, expected_delivery_date, id]
       );
       const poRow = rows[0];
 
@@ -294,6 +294,16 @@ async function receive(req, res, next) {
             userId: req.user.id
           });
 
+          // Dynamic Cost Propagation: Weighted Moving Average
+          await applyWeightedMovingAverage(client, {
+            productId: line.product_id,
+            newQty: acceptedDelta,
+            newCost: line.unit_price,
+            sourceType: 'PO_RECEIPT',
+            sourceId: line.id,
+            userId: req.user.id
+          });
+
           if (poRow.source_type === 'auto_from_so' && poRow.source_ref) {
             const soLineRes = await client.query(`
               SELECT sl.id FROM so_lines sl
@@ -374,7 +384,7 @@ async function pay(req, res, next) {
   try {
     const { id } = req.params;
     const poRes = await query(
-      `SELECT po.*, v.name AS vendor_name FROM purchase_orders po LEFT JOIN vendors v ON v.id = po.vendor_id WHERE po.id = $1`, [id]
+      `SELECT po.*, v.name AS vendor_name FROM purchase_order_view po LEFT JOIN vendors v ON v.id = po.vendor_id WHERE po.id = $1`, [id]
     );
     if (poRes.rows.length === 0) return res.status(404).json({ error: 'PO not found' });
     const po = poRes.rows[0];
@@ -442,7 +452,7 @@ async function generatePdf(req, res, next) {
     const { id } = req.params;
     const poRes = await query(
       `SELECT po.*, v.name AS vendor_name, u.full_name AS responsible_name
-       FROM purchase_orders po
+       FROM purchase_order_view po
        LEFT JOIN vendors v ON v.id = po.vendor_id
        LEFT JOIN users u ON u.id = po.responsible_id
        WHERE po.id = $1`, [id]

@@ -68,13 +68,14 @@ router.get('/control-tower',
           'STOCK_CRITICAL' AS alert_type,
           1 AS urgency,
           p.name AS subject,
-          'Stock critically low: ' || p.on_hand_qty || ' ' || p.unit || ' (min ' || p.min_stock_qty || ')' AS message,
+          'Stock critically low: ' || psv.on_hand_qty || ' ' || p.unit || ' (min ' || p.min_stock_qty || ')' AS message,
           'Reorder immediately' AS action,
           'product' AS entity_type,
           p.id AS entity_id,
           p.sku AS entity_ref
         FROM products p
-        WHERE p.on_hand_qty < p.min_stock_qty AND p.is_active = true
+        LEFT JOIN product_stock_view psv ON psv.id = p.id
+        WHERE psv.on_hand_qty < p.min_stock_qty AND p.is_active = true
 
         UNION ALL
 

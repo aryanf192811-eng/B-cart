@@ -76,7 +76,7 @@ async function getById(req, res, next) {
 
     const components = await query(
       `SELECT bc.*, p.name AS component_name, p.sku AS component_sku,
-              p.on_hand_qty,
+              psv.on_hand_qty,
               COALESCE(psv.free_to_use_qty, 0) AS free_to_use_qty
        FROM bom_components bc
        JOIN products p ON p.id = bc.component_id

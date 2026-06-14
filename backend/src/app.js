@@ -30,6 +30,7 @@ const chatRoutes           = require('./modules/chat/chat.routes');
 const auditRoutes          = require('./modules/audit/audit.routes');
 const inventoryRoutes      = require('./modules/inventory/inventory.routes');
 const reportsRoutes        = require('./modules/reports/reports.routes');
+const configRoutes         = require('./modules/config/config.routes');
 
 const app = express();
 
@@ -58,11 +59,14 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,  // 1 minute
   max: 10,
-  message: { error: 'Too many login attempts. Try again in a minute.' },
+  message: { error: 'Too many login/auth attempts. Try again in a minute.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/verify-otp', authLimiter);
+app.use('/api/auth/resend-otp', authLimiter);
+app.use('/api/auth/signup', authLimiter);
 
 // ── Routes ──────────────────────────────────────────────────
 app.use('/api/health',         healthRoutes);
@@ -85,6 +89,7 @@ app.use('/api/chat',           chatRoutes);
 app.use('/api/audit',          auditRoutes);
 app.use('/api/inventory',      inventoryRoutes);
 app.use('/api/reports',        reportsRoutes);
+app.use('/api/config',         configRoutes);
 
 // ── 404 catch-all ───────────────────────────────────────────
 app.use((req, res) => {

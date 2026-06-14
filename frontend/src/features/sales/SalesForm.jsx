@@ -237,16 +237,31 @@ export default function SalesForm({ mode }) {
                   const delivered = origItem?.qty_delivered || 0;
                   
                   let availableStatus = null;
-                  if (!isNew && prod) {
-                    const freeToUse = prod.freeToUseQty || (prod.onHandQty - (prod.reservedQty||0));
-                    const remaining = ordered - delivered;
-                    availableStatus = freeToUse >= remaining ? 'Available' : 'Not available';
+                  if (!isNew) {
+                    if (origItem && typeof origItem.availability === 'boolean') {
+                      availableStatus = origItem.availability ? 'Available' : 'Not available';
+                    } else if (prod) {
+                      const freeToUse = parseFloat(prod.free_to_use_qty || prod.on_hand_qty || 0);
+                      const remaining = ordered - delivered;
+                      availableStatus = freeToUse >= remaining ? 'Available' : 'Not available';
+                    }
                   }
 
                   return (
                     <tr key={f.id} className="border-b-[0.5px] border-rule">
                       <td className="px-3 py-2">
-                        <select {...form.register(`items.${i}.product`)} className="field w-full" disabled={!isDraft}>
+                        <select 
+                          {...form.register(`items.${i}.product`, {
+                            onChange: (e) => {
+                              const selectedProd = products?.find(p => p.id == e.target.value || p._id == e.target.value);
+                              if (selectedProd) {
+                                form.setValue(`items.${i}.salesPrice`, parseFloat(selectedProd.sales_price) || 0);
+                              }
+                            }
+                          })} 
+                          className="field w-full" 
+                          disabled={!isDraft}
+                        >
                           <option value="">Select product...</option>
                           {products?.map?.(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
                         </select>
@@ -359,7 +374,7 @@ export default function SalesForm({ mode }) {
                 {auditLogs.filter(a => a.action === 'Updated' && (a.fieldChanged === 'status' || a.field_name === 'status')).map((log, idx) => (
                   <div key={idx} className="relative pl-4">
                     <div className="absolute w-2 h-2 rounded-full bg-ink -left-[4.5px] top-[6px]"></div>
-                    <div className="text-[13px] text-ink capitalize">{log.newValue || log.new_value}</div>
+                    <div className="text-[13px] text-ink capitalize">{(log.newValue || log.new_value || '').replace(/_/g, ' ')}</div>
                     <div className="text-[11px] text-steel font-mono">{format(new Date(log.dateAndTime || log.created_at || new Date()), 'dd MMM HH:mm')}</div>
                   </div>
                 ))}
@@ -400,7 +415,7 @@ export default function SalesForm({ mode }) {
             const remaining = item.qty_ordered - (item.qty_delivered || 0);
             if (remaining <= 0) return null;
             
-            const freeToUse = prod?.freeToUseQty || 0;
+            const freeToUse = parseFloat(prod?.free_to_use_qty || prod?.on_hand_qty || 0);
             const max = Math.min(remaining, freeToUse);
 
             return (

@@ -11,6 +11,7 @@ import { useAuth } from '../store/auth';
 import { useSocket } from '../hooks/useSocket';
 import DataTable from '../components/DataTable';
 import StatusBadge from '../components/StatusBadge';
+import Tooltip from '../components/Tooltip';
 
 // Map alert entity_type → frontend route
 function getAlertLink(alert) {
@@ -109,11 +110,11 @@ export default function Dashboard() {
   const alertsCount = alertData?.length || 0;
 
   // Stat blocks data parsing
-  const counts = kpiData?.counts || { sales: {}, purchase: {}, manufacturing: {}, inventory: {} };
-  const openSO = (counts.sales.draft || 0) + (counts.sales.confirmed || 0) + (counts.sales.partially_delivered || 0);
-  const openPO = (counts.purchase.draft || 0) + (counts.purchase.confirmed || 0) + (counts.purchase.partially_received || 0);
-  const activeMO = (counts.manufacturing.in_progress || 0) + (counts.manufacturing.to_close || 0);
-  const lowStock = counts.inventory.low_stock_count || 0;
+  const counts = kpiData || { sales: {}, purchase: {}, manufacturing: {}, inventory: {} };
+  const openSO = parseInt(counts.sales?.draft || 0) + parseInt(counts.sales?.confirmed || 0) + parseInt(counts.sales?.partially_delivered || 0);
+  const openPO = parseInt(counts.purchase?.draft || 0) + parseInt(counts.purchase?.confirmed || 0) + parseInt(counts.purchase?.partially_received || 0);
+  const activeMO = parseInt(counts.manufacturing?.in_progress || 0) + parseInt(counts.manufacturing?.to_close || 0);
+  const lowStock = parseInt(counts.inventory?.low_stock_count || 0);
 
   return (
     <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto">
@@ -159,22 +160,34 @@ export default function Dashboard() {
       {/* ROW 2: Stat Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/sales')}>
-          <div className="stat-label flex items-center gap-1.5"><ShoppingCart size={12} /> Sales · open</div>
+          <div className="stat-label flex items-center justify-between">
+            <div className="flex items-center gap-1.5"><ShoppingCart size={12} /> Sales · open</div>
+            <Tooltip content="Total count of Sales Orders in draft, confirmed, or partially_delivered status. Calculated dynamically from sales_orders table." />
+          </div>
           <div className="stat-value">{openSO}</div>
-          <div className="stat-delta">late: {counts.sales.late || 0}</div>
+          <div className="stat-delta">late: {counts.sales?.late || 0} | rev: ₹{parseFloat(counts.sales?.revenue || 0).toLocaleString('en-IN')}</div>
         </div>
         <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/purchase')}>
-          <div className="stat-label flex items-center gap-1.5"><Truck size={12} /> Purchase · open</div>
+          <div className="stat-label flex items-center justify-between">
+            <div className="flex items-center gap-1.5"><Truck size={12} /> Purchase · open</div>
+            <Tooltip content="Total count of Purchase Orders in draft, confirmed, or partially_received status. Revenue reflects 'total_amount' dynamically fetched from views." />
+          </div>
           <div className="stat-value">{openPO}</div>
-          <div className="stat-delta">late: {counts.purchase.late || 0}</div>
+          <div className="stat-delta">rcvd: {counts.purchase?.total_received_qty || 0} | rej: {counts.purchase?.total_rejected_qty || 0}</div>
         </div>
         <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/manufacturing')}>
-          <div className="stat-label flex items-center gap-1.5"><Factory size={12} /> Manufacturing · active</div>
+          <div className="stat-label flex items-center justify-between">
+            <div className="flex items-center gap-1.5"><Factory size={12} /> Manufacturing · active</div>
+            <Tooltip content="Total count of active MOs (in_progress or to_close). Blocked MOs are those where required components exceed available on_hand_qty." />
+          </div>
           <div className="stat-value">{activeMO}</div>
-          <div className="stat-delta">blocked: {counts.manufacturing.blocked || 0}</div>
+          <div className="stat-delta">late: {counts.manufacturing?.late || 0}</div>
         </div>
         <div className="stat-block cursor-pointer hover:border-ink transition-colors" onClick={() => navigate('/products?low_stock=true')}>
-          <div className="stat-label flex items-center gap-1.5"><Activity size={12} /> Inventory · low stock</div>
+          <div className="stat-label flex items-center justify-between">
+            <div className="flex items-center gap-1.5"><Activity size={12} /> Inventory · low stock</div>
+            <Tooltip content="Count of products where dynamically calculated on_hand_qty < min_stock_qty. Updated instantly via the stock_ledger." />
+          </div>
           <div className="stat-value text-danger">{lowStock}</div>
           <div className="stat-delta">needs attention</div>
         </div>

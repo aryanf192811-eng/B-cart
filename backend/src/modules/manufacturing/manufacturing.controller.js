@@ -104,7 +104,7 @@ async function getById(req, res, next) {
 
     const componentsRes = await query(
       `SELECT mc.*, p.name AS component_name, p.sku AS component_sku,
-              p.on_hand_qty, COALESCE(psv.free_to_use_qty, 0) AS free_to_use_qty
+              psv.on_hand_qty, COALESCE(psv.free_to_use_qty, 0) AS free_to_use_qty
        FROM mo_components mc
        JOIN products p ON p.id = mc.component_id
        LEFT JOIN product_stock_view psv ON psv.id = mc.component_id
@@ -523,7 +523,7 @@ async function generatePdf(req, res, next) {
 
     const compsRes = await query(
       `SELECT mc.*, p.name AS component_name, p.sku AS component_sku,
-              p.on_hand_qty, COALESCE(psv.free_to_use_qty, 0) AS free_to_use_qty
+              psv.on_hand_qty, COALESCE(psv.free_to_use_qty, 0) AS free_to_use_qty
        FROM mo_components mc
        JOIN products p ON p.id = mc.component_id
        LEFT JOIN product_stock_view psv ON psv.id = mc.component_id

@@ -25,9 +25,9 @@ async function writeStockMove(client, {
   userId = null,
   notes = null,
 }) {
-  // Lock the product row to prevent concurrent on_hand updates
+  // Lock the product row to serialize concurrent stock moves for the same product
   const { rows: productRows } = await client.query(
-    'SELECT id, on_hand_qty FROM products WHERE id = $1 FOR UPDATE',
+    'SELECT id FROM products WHERE id = $1 FOR UPDATE',
     [productId]
   );
 
@@ -38,7 +38,13 @@ async function writeStockMove(client, {
     throw err;
   }
 
-  let currentQty = parseFloat(productRows[0].on_hand_qty);
+  // Get current quantity dynamically from view
+  const { rows: qtyRows } = await client.query(
+    'SELECT on_hand_qty FROM product_stock_view WHERE id = $1',
+    [productId]
+  );
+
+  let currentQty = parseFloat(qtyRows[0]?.on_hand_qty || 0);
   let newQty = currentQty;
 
   // Determine new on_hand_qty based on move type
@@ -67,14 +73,7 @@ async function writeStockMove(client, {
     }
   }
   // RESERVE and UNRESERVE do NOT change on_hand_qty
-
-  // Update on_hand_qty for IN, OUT, ADJUST
-  if (['IN', 'OUT', 'ADJUST'].includes(moveType)) {
-    await client.query(
-      'UPDATE products SET on_hand_qty = $1, updated_at = NOW() WHERE id = $2',
-      [newQty, productId]
-    );
-  }
+  // Note: we no longer update products.on_hand_qty because it is dynamically calculated.
 
   // Insert stock_ledger row (append-only)
   const balanceAfter = ['IN', 'OUT', 'ADJUST'].includes(moveType)

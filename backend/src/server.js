@@ -6,6 +6,7 @@ const app = require('./app');
 const env = require('./config/env');
 const { logger } = require('./config/db');
 const { Server: SocketServer } = require('socket.io');
+const { startEventWorker } = require('./events/eventWorker');
 
 const server = http.createServer(app);
 
@@ -25,10 +26,13 @@ io.on('connection', (socket) => {
   });
 });
 
-// Make io available to routes via app.locals
+// Make io available to routes via app.locals and globally for workers
 app.locals.io = io;
+global.io = io;
 
 // ── Start server ────────────────────────────────────────────
+startEventWorker();
+
 const PORT = env.port;
 server.listen(PORT, () => {
   logger.info(`B-cart backend on :${PORT}`);

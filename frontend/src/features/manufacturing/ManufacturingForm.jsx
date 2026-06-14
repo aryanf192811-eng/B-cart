@@ -274,7 +274,7 @@ export default function ManufacturingForm({ mode }) {
                     const prod = products?.find(p => p.id === prodId || p._id === prodId);
                     const prodName = comp.component_name || prod?.name || 'Unknown';
                     
-                    const freeToUse = comp.free_to_use_qty || prod?.freeToUseQty || 0;
+                    const freeToUse = comp.free_to_use_qty || prod?.free_to_use_qty || prod?.on_hand_qty || 0;
                     const toConsume = comp.qty_required || comp.toConsumeQuantity || 0;
                     const consumed = comp.qty_consumed || comp.consumedQuantity || 0;
                     const available = freeToUse >= toConsume;

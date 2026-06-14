@@ -2,6 +2,8 @@ export const E = {
   // Auth
   login: () => '/auth/login',
   signup: () => '/auth/signup',
+  verifyOtp: () => '/auth/verify-otp',
+  resendOtp: () => '/auth/resend-otp',
   refresh: () => '/auth/refresh',
   logout: () => '/auth/logout',
   me: () => '/auth/me',
@@ -16,6 +18,7 @@ export const E = {
   products: () => '/products',
   product: (id) => `/products/${id}`,
   productBreakdown: (id) => `/products/${id}/inventory-breakdown`,
+  productTraceability: (id) => `/products/${id}/traceability`,
   productImage: (id) => `/products/${id}/image`,
   vendors: () => '/vendors',
   vendor: (id) => `/vendors/${id}`,
@@ -65,6 +68,8 @@ export const E = {
   passport: (id) => `/passports/${id}`,
   passportQc: (id) => `/passports/${id}/qc`,
   passportPdf: (id) => `/passports/${id}/pdf`,
+  // Config
+  config: () => '/config',
   // Intelligence
   intelProc: () => '/intelligence/procurement-alerts',
   intelVendors: () => '/intelligence/vendor-scores',

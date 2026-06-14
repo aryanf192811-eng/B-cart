@@ -4,6 +4,7 @@ import { useForm as useRHForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../../store/auth';
+import { api } from '../../api/client';
 
 const IMAGES = [
   "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2000&auto=format&fit=crop",
@@ -19,7 +20,11 @@ const schema = z.object({
 export default function Login() {
   const [error, setError] = useState('');
   const [bgIndex, setBgIndex] = useState(0);
+  const [step, setStep] = useState('login'); // 'login' | 'otp'
+  const [savedLoginId, setSavedLoginId] = useState('');
   const login = useAuth((s) => s.login);
+  const verifyOtp = useAuth((s) => s.verifyOtp);
+  const resendOtp = useAuth((s) => s.resendOtp);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,13 +42,50 @@ export default function Login() {
     }
   });
 
+  const { register: registerOtp, handleSubmit: handleOtpSubmit, formState: { errors: errorsOtp, isSubmitting: isSubmittingOtp } } = useRHForm({
+    resolver: zodResolver(z.object({
+      otp_code: z.string().length(6, 'Must be 6 digits')
+    }))
+  });
+
   const onSubmit = async (data) => {
     try {
       setError('');
       await login(data.login_id, data.password);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Invalid credentials');
+      if (err.response?.data?.unverified) {
+        if (err.response.data.dev_otp) {
+          console.log('%c[DEV MODE] MFA OTP Code:', 'color: #00ff00; font-weight: bold; font-size: 14px', err.response.data.dev_otp);
+        }
+        setSavedLoginId(err.response.data.login_id);
+        setStep('otp');
+      } else {
+        setError(err.response?.data?.error || 'Invalid credentials');
+      }
+    }
+  };
+
+  const onVerifyOtp = async (data) => {
+    try {
+      setError('');
+      await verifyOtp(savedLoginId, data.otp_code);
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to verify OTP');
+    }
+  };
+
+  const handleResendOtp = async () => {
+    try {
+      setError('');
+      const data = await resendOtp(savedLoginId);
+      if (data.dev_otp) {
+        console.log('%c[DEV MODE] Resent MFA OTP Code:', 'color: #00ff00; font-weight: bold; font-size: 14px', data.dev_otp);
+      }
+      alert('A new OTP has been sent to your mobile number.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to resend OTP');
     }
   };
 
@@ -75,54 +117,93 @@ export default function Login() {
       {/* Right 60% */}
       <div className="flex w-full lg:w-[60%] bg-paper items-center justify-center p-8">
         <div className="w-full max-w-[340px]">
-          <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rust to-info mb-2 drop-shadow-sm" style={{ fontFamily: 'Roboto, sans-serif' }}>
-            Welcome to B-cart
-          </h1>
-          <p className="text-[15px] text-steel font-medium mb-8">Sign in to the operations floor</p>
-          
-          <form id="login-form" onSubmit={handleSubmit(onSubmit)} className={`space-y-4 ${error ? 'border-l-[0.5px] border-danger pl-4 -ml-[16.5px]' : ''}`}>
-            {error && <div className="auth-error text-danger text-sm mb-4">{error}</div>}
-            
-            <div>
-              <label htmlFor="login_id" className="field-label">Login ID</label>
-              <input 
-                {...register('login_id')}
-                id="login_id"
-                className="field w-full"
-                name="login_id"
-                autoComplete="username"
-              />
-              {errors.login_id && <p className="field-error">{errors.login_id.message}</p>}
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="field-label">Password</label>
-              <input 
-                {...register('password')}
-                id="password"
-                type="password"
-                className="field w-full"
-                name="password"
-                autoComplete="current-password"
-              />
-              {errors.password && <p className="field-error">{errors.password.message}</p>}
-            </div>
+          {step === 'login' ? (
+            <>
+              <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rust to-info mb-2 drop-shadow-sm" style={{ fontFamily: 'Roboto, sans-serif' }}>
+                Welcome to B-cart
+              </h1>
+              <p className="text-[15px] text-steel font-medium mb-8">Sign in to the operations floor</p>
+              
+              <form id="login-form" onSubmit={handleSubmit(onSubmit)} className={`space-y-4 ${error ? 'border-l-[0.5px] border-danger pl-4 -ml-[16.5px]' : ''}`}>
+                {error && <div className="auth-error text-danger text-sm mb-4">{error}</div>}
+                
+                <div>
+                  <label htmlFor="login_id" className="field-label">Login ID</label>
+                  <input 
+                    {...register('login_id')}
+                    id="login_id"
+                    className="field w-full"
+                    name="login_id"
+                    autoComplete="username"
+                  />
+                  {errors.login_id && <p className="field-error">{errors.login_id.message}</p>}
+                </div>
+                
+                <div>
+                  <label htmlFor="password" className="field-label">Password</label>
+                  <input 
+                    {...register('password')}
+                    id="password"
+                    type="password"
+                    className="field w-full"
+                    name="password"
+                    autoComplete="current-password"
+                  />
+                  {errors.password && <p className="field-error">{errors.password.message}</p>}
+                </div>
 
-            <button 
-              id="login-submit"
-              type="submit" 
-              disabled={isSubmitting}
-              className="btn btn-rust w-full justify-center mt-2"
-            >
-              {isSubmitting ? 'Signing in...' : 'Sign in'}
-            </button>
-          </form>
+                <button 
+                  id="login-submit"
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="btn btn-rust w-full justify-center mt-2"
+                >
+                  {isSubmitting ? 'Signing in...' : 'Sign in'}
+                </button>
+              </form>
 
-          <div className="mt-8 flex items-center justify-center gap-3 text-[12px] text-steel">
-            <Link to="/forgot-password" className="hover:text-ink transition-colors">Forgot Password?</Link>
-            <span className="text-rule2">|</span>
-            <Link to="/signup" className="hover:text-ink transition-colors">Create an account</Link>
-          </div>
+              <div className="mt-8 flex items-center justify-center gap-3 text-[12px] text-steel">
+                <Link to="/forgot-password" className="hover:text-ink transition-colors">Forgot Password?</Link>
+                <span className="text-rule2">|</span>
+                <Link to="/signup" className="hover:text-ink transition-colors">Create an account</Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl font-black text-ink mb-2 drop-shadow-sm" style={{ fontFamily: 'Roboto, sans-serif' }}>
+                Security Verification
+              </h1>
+              <p className="text-[15px] text-steel font-medium mb-8">Enter the 6-digit MFA code sent to your registered device</p>
+              
+              <form onSubmit={handleOtpSubmit(onVerifyOtp)} className={`space-y-4 ${error ? 'border-l-[0.5px] border-danger pl-4 -ml-[16.5px]' : ''}`}>
+                {error && <div className="text-danger text-sm mb-4">{error}</div>}
+                
+                <div>
+                  <label htmlFor="otp_code" className="field-label">6-Digit Code</label>
+                  <input 
+                    id="otp_code" 
+                    {...registerOtp('otp_code')} 
+                    className="field w-full font-mono text-center tracking-widest text-lg" 
+                    maxLength={6} 
+                  />
+                  {errorsOtp.otp_code && <p className="field-error text-center">{errorsOtp.otp_code.message}</p>}
+                </div>
+
+                <button type="submit" disabled={isSubmittingOtp} className="btn btn-rust w-full justify-center mt-2">
+                  {isSubmittingOtp ? 'Verifying...' : 'Verify & Login'}
+                </button>
+              </form>
+
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 text-[13px]">
+                <button type="button" onClick={handleResendOtp} className="text-rust hover:underline font-medium">
+                  Resend OTP
+                </button>
+                <button type="button" onClick={() => setStep('login')} className="text-steel hover:text-ink transition-colors mt-2">
+                  Back to Login
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

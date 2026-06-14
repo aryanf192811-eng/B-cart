@@ -278,7 +278,21 @@ export default function PurchaseForm({ mode }) {
                   return (
                     <tr key={f.id} className="border-b-[0.5px] border-rule">
                       <td className="px-3 py-2">
-                        <select {...form.register(`items.${i}.product`)} className="field w-full" disabled={!isDraft}>
+                        <select 
+                          {...form.register(`items.${i}.product`, {
+                            onChange: (e) => {
+                              const selectedProd = products?.find(p => p.id == e.target.value || p._id == e.target.value);
+                              if (selectedProd) {
+                                form.setValue(`items.${i}.costPrice`, parseFloat(selectedProd.cost_price) || 0);
+                                if (selectedProd.default_vendor_id && !form.getValues('vendor_id')) {
+                                  form.setValue('vendor_id', selectedProd.default_vendor_id);
+                                }
+                              }
+                            }
+                          })} 
+                          className="field w-full" 
+                          disabled={!isDraft}
+                        >
                           <option value="">Select product...</option>
                           {products?.map?.(p => <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>)}
                         </select>

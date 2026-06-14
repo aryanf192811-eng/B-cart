@@ -18,6 +18,9 @@ router.get('/:id', requireModule('Product', 'user'), ctrl.getById);
 // GET /api/products/:id/inventory-breakdown
 router.get('/:id/inventory-breakdown', requireModule('Product', 'user'), ctrl.inventoryBreakdown);
 
+// GET /api/products/:id/traceability
+router.get('/:id/traceability', requireModule('Product', 'user'), ctrl.getTraceability);
+
 // POST /api/products
 router.post(
   '/',

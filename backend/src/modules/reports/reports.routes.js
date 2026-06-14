@@ -18,14 +18,15 @@ router.get('/stock/pdf', async (req, res, next) => {
       SELECT p.id, p.sku, p.name, p.unit, p.cost_price,
              COALESCE(SUM(CASE WHEN sl.move_type = 'IN' AND sl.created_at BETWEEN $1 AND $2::date + INTERVAL '1 day' THEN sl.qty ELSE 0 END), 0) AS period_in,
              COALESCE(SUM(CASE WHEN sl.move_type = 'OUT' AND sl.created_at BETWEEN $1 AND $2::date + INTERVAL '1 day' THEN sl.qty ELSE 0 END), 0) AS period_out,
-             (SELECT COALESCE(sl2.balance_after, p.on_hand_qty)
+             (SELECT COALESCE(sl2.balance_after, psv.on_hand_qty)
               FROM stock_ledger sl2 WHERE sl2.product_id = p.id AND sl2.created_at < $1
               ORDER BY sl2.created_at DESC LIMIT 1) AS opening_qty,
-             p.on_hand_qty AS closing_qty
+             psv.on_hand_qty AS closing_qty
       FROM products p
+      LEFT JOIN product_stock_view psv ON psv.id = p.id
       LEFT JOIN stock_ledger sl ON sl.product_id = p.id
       WHERE p.is_active = true
-      GROUP BY p.id, p.sku, p.name, p.unit, p.cost_price, p.on_hand_qty
+      GROUP BY p.id, p.sku, p.name, p.unit, p.cost_price, psv.on_hand_qty
       ORDER BY p.name
     `, [fromDate, toDate]);
 

@@ -10,6 +10,7 @@ import { E } from '../../api/endpoints';
 import { assetUrl } from '../../utils/assetUrl';
 import FormShell from '../../components/FormShell';
 import { FieldRow, FieldGrid } from '../../components/FieldRow';
+import MaterialTraceability from './MaterialTraceability';
 
 
 export default function ProductForm({ mode }) {
@@ -20,6 +21,7 @@ export default function ProductForm({ mode }) {
   const [isEditing, setIsEditing] = useState(isNew);
   const imageInputRef = useRef(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const { data: prodData, isLoading } = useQuery({
     queryKey: ['products', id],
@@ -43,8 +45,7 @@ export default function ProductForm({ mode }) {
   const form = useForm({
     defaultValues: {
       sku: '', name: '', category_id: '', unit: 'Units',
-      sales_price: 0, cost_price: 0, on_hand_qty: 0,
-      min_stock_qty: 0, lead_time_days: 7,
+      sales_price: 0, cost_price: 0, lead_time_days: 7,
       procure_on_demand: false, procurement_type: 'purchase'
     }
   });
@@ -60,8 +61,6 @@ export default function ProductForm({ mode }) {
         unit: prod.unit || 'Units',
         sales_price: parseFloat(prod.sales_price) || 0,
         cost_price: parseFloat(prod.cost_price) || 0,
-        on_hand_qty: parseFloat(prod.on_hand_qty) || 0,
-        min_stock_qty: parseFloat(prod.min_stock_qty) || 0,
         lead_time_days: parseInt(prod.lead_time_days) || 7,
         procure_on_demand: prod.procure_on_demand || false,
         procurement_type: prod.procurement_type || 'purchase'
@@ -74,14 +73,31 @@ export default function ProductForm({ mode }) {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      if (isNew) return (await api.post(E.products(), data)).data;
-      return (await api.put(E.product(id), data)).data;
+      let productId;
+      if (isNew) {
+        const res = await api.post(E.products(), data);
+        productId = res.data._id || res.data.id;
+      } else {
+        const res = await api.put(E.product(id), data);
+        productId = id;
+      }
+
+      if (selectedFile) {
+        const fd = new FormData();
+        fd.append('image', selectedFile);
+        await api.post(`/products/${productId}/image`, fd);
+      }
+
+      return { id: productId };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['products']);
       toast.success('Product saved');
-      if (isNew) navigate(`/products/${data._id || data.id}`, { replace: true });
-      else setIsEditing(false);
+      if (isNew) navigate(`/products/${data.id}`, { replace: true });
+      else {
+        setIsEditing(false);
+        setSelectedFile(null);
+      }
     },
     onError: () => toast.error('Failed to save product')
   });
@@ -103,11 +119,15 @@ export default function ProductForm({ mode }) {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (isNew) {
-      toast.error('Save product first before uploading image');
-      return;
+    
+    // Create a local preview
+    setImagePreview(URL.createObjectURL(file));
+    setSelectedFile(file);
+
+    // If not new, upload immediately as before
+    if (!isNew) {
+      imageMutation.mutate(file);
     }
-    imageMutation.mutate(file);
   };
 
   const onSubmit = (data) => {
@@ -130,44 +150,60 @@ export default function ProductForm({ mode }) {
         <FormShell.Body>
           <div className="card p-6">
             {/* Product Image */}
-            {!isNew && (
-              <div className="mb-6 flex items-start gap-5">
-                <div
-                  className={`w-24 h-24 rounded-lg border-[0.5px] border-rule bg-paper2 flex items-center justify-center overflow-hidden relative ${isEditing ? 'cursor-pointer group' : ''}`}
-                  onClick={() => isEditing && imageInputRef.current?.click()}
-                >
-                  {imagePreview
-                    ? <img src={imagePreview} alt={prod?.name} className="w-full h-full object-cover" />
-                    : <Camera size={28} className="text-steel group-hover:text-rust transition-colors" />
-                  }
+            {/* Product Gallery */}
+            {(isNew || isEditing || prod?.images?.length > 0) && (
+              <div className="mb-6">
+                <div className="text-[12px] font-semibold text-ink mb-1">Product Gallery</div>
+                <div className="text-[11px] text-steel mb-3">Upload multiple images (JPEG, PNG, WebP up to 5 MB). The first image will be set as primary.</div>
+                
+                <div className="flex flex-wrap items-start gap-4">
+                  {/* Existing Images */}
+                  {!isNew && prod?.images?.map((img, idx) => (
+                    <div key={img.id} className="relative group w-24 h-24 rounded-lg border-[0.5px] border-rule bg-paper2 overflow-hidden flex-shrink-0">
+                      <img src={assetUrl(img.url)} alt={`${prod?.name} ${idx}`} className="w-full h-full object-cover" />
+                      {img.is_primary && (
+                        <div className="absolute top-1 left-1 bg-rust text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                          Primary
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Local Selected Image Preview for New/Edit */}
+                  {selectedFile && (
+                    <div className="relative group w-24 h-24 rounded-lg border-[0.5px] border-rust bg-paper2 overflow-hidden flex-shrink-0">
+                      <img src={imagePreview} alt="Selected preview" className="w-full h-full object-cover" />
+                      <div className="absolute top-1 left-1 bg-rust text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                        To Upload
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload Button Box */}
                   {isEditing && (
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Upload size={18} className="text-white" />
+                    <div
+                      className="w-24 h-24 rounded-lg border-[0.5px] border-dashed border-steel bg-paper2 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:border-rust group transition-colors flex-shrink-0"
+                      onClick={() => imageInputRef.current?.click()}
+                    >
+                      <Camera size={24} className="text-steel group-hover:text-rust transition-colors mb-1" />
+                      <span className="text-[10px] text-steel group-hover:text-rust font-medium">Add Photo</span>
                     </div>
                   )}
                 </div>
-                <div className="pt-1">
-                  <div className="text-[12px] font-semibold text-ink mb-1">Product Image</div>
-                  <div className="text-[11px] text-steel mb-2">JPEG, PNG, WebP up to 5 MB.</div>
-                  {isEditing && (
-                    <>
-                      <button
-                        type="button"
-                        className="text-[12px] text-rust hover:underline font-medium"
-                        onClick={() => imageInputRef.current?.click()}
-                      >
-                        {imageMutation.isPending ? 'Uploading...' : imagePreview ? 'Change Image' : 'Upload Image'}
-                      </button>
-                      <input
-                        ref={imageInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={handleImageChange}
-                      />
-                    </>
-                  )}
-                </div>
+
+                {isEditing && (
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
+                )}
+                
+                {imageMutation.isPending && (
+                  <div className="text-[12px] text-rust mt-2">Uploading image...</div>
+                )}
               </div>
             )}
 
@@ -201,12 +237,6 @@ export default function ProductForm({ mode }) {
                 </FieldRow>
                 <FieldRow label="Cost Price (₹)">
                   <input type="number" step="0.01" min="0" {...form.register('cost_price', { valueAsNumber: true })} className="field font-mono" />
-                </FieldRow>
-                <FieldRow label="On Hand Qty" hint={isEditing ? "Editing this writes a stock adjustment" : undefined}>
-                  <input type="number" step="0.001" min="0" {...form.register('on_hand_qty', { valueAsNumber: true })} className="field font-mono" />
-                </FieldRow>
-                <FieldRow label="Min Stock Qty">
-                  <input type="number" step="0.001" min="0" {...form.register('min_stock_qty', { valueAsNumber: true })} className="field font-mono" />
                 </FieldRow>
                 <FieldRow label="Lead Time (days)">
                   <input type="number" step="1" min="0" {...form.register('lead_time_days', { valueAsNumber: true })} className="field font-mono" />
@@ -261,6 +291,9 @@ export default function ProductForm({ mode }) {
               </table>
             </div>
           )}
+
+          {/* Material Traceability */}
+          {!isNew && <MaterialTraceability productId={id} />}
         </FormShell.Body>
 
         <FormShell.Side>

@@ -38,7 +38,21 @@ export const useAuth = create((set, get) => ({
   },
 
   signup: async (payload) => {
-    await api.post(E.signup(), payload);
+    const res = await api.post(E.signup(), payload);
+    return res.data;
+  },
+
+  verifyOtp: async (login_id, otp_code) => {
+    const res = await api.post('/auth/verify-otp', { login_id, otp_code });
+    const user = res.data.user;
+    user.access_map = buildAccessMap(user.module_access);
+    set({ user });
+    return res.data;
+  },
+
+  resendOtp: async (login_id) => {
+    const res = await api.post('/auth/resend-otp', { login_id });
+    return res.data;
   },
 
   logout: async () => {

@@ -49,16 +49,16 @@ router.get('/summary', requireModule('Purchase', 'user'), async (req, res, next)
   try {
     const { rows } = await query(`
       SELECT p.id, p.name, p.sku, p.unit, p.cost_price,
-             p.on_hand_qty,
+             psv.on_hand_qty,
              COALESCE(psv.free_to_use_qty, 0) AS free_to_use_qty,
-             p.on_hand_qty * p.cost_price AS total_value,
+             psv.on_hand_qty * p.cost_price AS total_value,
              COALESCE(SUM(CASE WHEN sl.move_type = 'IN'  AND sl.created_at >= NOW() - INTERVAL '30 days' THEN sl.qty ELSE 0 END), 0) AS incoming_30d,
              COALESCE(SUM(CASE WHEN sl.move_type = 'OUT' AND sl.created_at >= NOW() - INTERVAL '30 days' THEN sl.qty ELSE 0 END), 0) AS outgoing_30d
       FROM products p
       LEFT JOIN product_stock_view psv ON psv.id = p.id
       LEFT JOIN stock_ledger sl ON sl.product_id = p.id
       WHERE p.is_active = true
-      GROUP BY p.id, p.name, p.sku, p.unit, p.cost_price, p.on_hand_qty, psv.free_to_use_qty
+      GROUP BY p.id, p.name, p.sku, p.unit, p.cost_price, psv.on_hand_qty, psv.free_to_use_qty
       ORDER BY p.name
     `);
 

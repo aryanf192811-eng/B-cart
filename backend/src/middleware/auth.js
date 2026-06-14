@@ -1,10 +1,11 @@
 const { verifyAccess } = require('../utils/jwt');
+const { query } = require('../config/db');
 
 /**
  * Require a valid access token. Reads from httpOnly cookie or Authorization header.
  * Attaches decoded user to req.user.
  */
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const token =
     req.cookies?.accessToken ||
     (req.headers.authorization?.startsWith('Bearer ')
@@ -16,7 +17,15 @@ function requireAuth(req, res, next) {
   }
 
   try {
-    req.user = verifyAccess(token);
+    const decoded = verifyAccess(token);
+    
+    // Check blacklist
+    const { rows } = await query('SELECT 1 FROM token_blacklist WHERE token = $1 LIMIT 1', [token]);
+    if (rows.length > 0) {
+      const err = new Error('Token invalidated'); err.status = 401; throw err;
+    }
+
+    req.user = decoded;
     next();
   } catch (_err) {
     return res.status(401).json({ error: 'Unauthorized' });

@@ -13,26 +13,34 @@ const COOKIE_OPTS = {
 
 const ALL_MODULES = ['Sales', 'Purchase', 'Manufacturing', 'Product', 'BoM', 'Inventory'];
 
+// ── GET /api/auth/roles ───────────────────────────────────────
+async function getRoles(req, res, next) {
+  try {
+    const { rows } = await query('SELECT id, name FROM roles ORDER BY name');
+    res.json({ roles: rows });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ── POST /api/auth/signup ─────────────────────────────────────
 async function signup(req, res, next) {
   try {
-    const { login_id, email, password, full_name } = req.body;
+    const { login_id, email, password, full_name, mobile, role_id } = req.body;
 
     const hash = await bcrypt.hash(password, 10);
+    
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60000); // 10 minutes
 
     const user = await withTransaction(async (client) => {
-      // Get the default role (first non-Admin role, or create a generic one)
-      const roleResult = await client.query(
-        "SELECT id FROM roles WHERE name = 'Sales User' LIMIT 1"
-      );
-      const roleId = roleResult.rows.length > 0 ? roleResult.rows[0].id : null;
-
-      // Insert user
+      // Insert user with OTP
       const { rows } = await client.query(
-        `INSERT INTO users (login_id, email, password_hash, full_name, role_id)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, login_id, email, full_name`,
-        [login_id, email, hash, full_name, roleId]
+        `INSERT INTO users (login_id, email, password_hash, full_name, role_id, mobile, mobile_verified, otp_code, otp_expiry, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, false, $7, $8, true)
+         RETURNING id, login_id, email, full_name, mobile`,
+        [login_id, email, hash, full_name, role_id || null, mobile, otp, otpExpiry]
       );
 
       const newUser = rows[0];
@@ -49,6 +57,12 @@ async function signup(req, res, next) {
       return newUser;
     });
 
+    // Simulate SMS provider
+    console.log(`\n\n=== SMS GATEWAY SIMULATION ===`);
+    console.log(`To: ${user.mobile}`);
+    console.log(`Message: Your B-Cart ERP verification code is ${otp}`);
+    console.log(`==============================\n\n`);
+
     await auditLog(req, {
       module: 'Auth',
       action: 'Created',
@@ -57,7 +71,55 @@ async function signup(req, res, next) {
       entityRef: user.login_id,
     });
 
-    res.status(201).json({ user });
+    res.status(201).json({ ok: true, message: 'OTP sent to mobile number', login_id: user.login_id, dev_otp: otp });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ── POST /api/auth/verify-otp ──────────────────────────────────
+async function verifyOtp(req, res, next) {
+  try {
+    const { login_id, otp_code } = req.body;
+    
+    const { rows } = await query(
+      `SELECT u.*, r.name AS role_name FROM users u
+       LEFT JOIN roles r ON r.id = u.role_id
+       WHERE u.login_id = $1`,
+      [login_id]
+    );
+
+    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    const user = rows[0];
+
+    // MFA check removed: mobile_verified is true after first login, but we need MFA every time.
+
+    if (user.otp_code !== otp_code || new Date() > new Date(user.otp_expiry)) {
+      return res.status(400).json({ error: 'Invalid or expired OTP' });
+    }
+
+    // Mark as verified
+    await query(
+      `UPDATE users SET mobile_verified = true, otp_code = null, otp_expiry = null WHERE id = $1`,
+      [user.id]
+    );
+
+    // Sign tokens
+    const accessToken = signAccess(user);
+    const refreshToken = signRefresh(user);
+
+    res.cookie('accessToken', accessToken, { ...COOKIE_OPTS, maxAge: 15 * 60 * 1000 });
+    res.cookie('refreshToken', refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+    res.json({
+      user: {
+        id: user.id,
+        login_id: user.login_id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role_name,
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -92,28 +154,23 @@ async function login(req, res, next) {
       return res.status(401).json({ error: 'Invalid login ID or password' });
     }
 
-    // Sign tokens
-    const accessToken = signAccess(user);
-    const refreshToken = signRefresh(user);
+    // Generate MFA OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60000); // 10 minutes
 
-    // Set cookies
-    res.cookie('accessToken', accessToken, {
-      ...COOKIE_OPTS,
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
-    res.cookie('refreshToken', refreshToken, {
-      ...COOKIE_OPTS,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    await query('UPDATE users SET otp_code = $1, otp_expiry = $2 WHERE id = $3', [otp, otpExpiry, user.id]);
 
-    res.json({
-      user: {
-        id: user.id,
-        login_id: user.login_id,
-        email: user.email,
-        full_name: user.full_name,
-        role: user.role_name,
-      },
+    console.log(`\n\n=== SMS GATEWAY SIMULATION ===`);
+    console.log(`To: ${user.mobile || 'Admin Console'}`);
+    console.log(`Message: Your B-Cart ERP verification code is ${otp}`);
+    console.log(`==============================\n\n`);
+
+    return res.status(403).json({ 
+      error: 'MFA required', 
+      unverified: true, 
+      mfa_required: true,
+      login_id: user.login_id,
+      dev_otp: otp
     });
   } catch (err) {
     next(err);
@@ -160,10 +217,25 @@ async function refresh(req, res, next) {
 }
 
 // ── POST /api/auth/logout ─────────────────────────────────────
-function logout(_req, res) {
-  res.clearCookie('accessToken', { path: '/' });
-  res.clearCookie('refreshToken', { path: '/' });
-  res.json({ ok: true });
+async function logout(req, res, next) {
+  try {
+    const { accessToken, refreshToken } = req.cookies;
+    
+    // Simple blacklisting logic (insert both tokens if present)
+    // Normally we'd decode and get the exp time, but for simplicity we'll just insert with a fixed +1 day expiration
+    const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    
+    if (accessToken) {
+      await query('INSERT INTO token_blacklist (token, expires_at) VALUES ($1, $2) ON CONFLICT DO NOTHING', [accessToken, expiry]);
+    }
+    if (refreshToken) {
+      await query('INSERT INTO token_blacklist (token, expires_at) VALUES ($1, $2) ON CONFLICT DO NOTHING', [refreshToken, expiry]);
+    }
+
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+    res.json({ ok: true });
+  } catch (err) { next(err); }
 }
 
 // ── GET /api/auth/me ──────────────────────────────────────────
@@ -197,4 +269,27 @@ async function me(req, res, next) {
   }
 }
 
-module.exports = { signup, login, refresh, logout, me };
+// ── POST /api/auth/resend-otp ──────────────────────────────────
+async function resendOtp(req, res, next) {
+  try {
+    const { login_id } = req.body;
+    const { rows } = await query('SELECT id, mobile, mobile_verified FROM users WHERE login_id = $1', [login_id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    const user = rows[0];
+    // MFA check removed: mobile_verified is true after first login, but we need MFA every time.
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60000);
+
+    await query('UPDATE users SET otp_code = $1, otp_expiry = $2 WHERE id = $3', [otp, otpExpiry, user.id]);
+
+    console.log(`\n\n=== SMS GATEWAY SIMULATION ===`);
+    console.log(`To: ${user.mobile}`);
+    console.log(`Message: Your B-Cart ERP verification code is ${otp}`);
+    console.log(`==============================\n\n`);
+
+    res.json({ ok: true, message: 'OTP resent to mobile number', dev_otp: otp });
+  } catch (err) { next(err); }
+}
+
+module.exports = { getRoles, signup, verifyOtp, resendOtp, login, refresh, logout, me };
