@@ -8,10 +8,21 @@ A lightweight, transactional Enterprise Resource Planning backend and React inte
 - **Stock Ledger Architecture:** Event-sourced inventory tracking via immutable `stock_ledger` entries.
 - **Intelligent Procurement:** Automated Purchase Order logic driven by Minimum Order Quantities (MOQ) and reorder points.
 
-## Screenshots
-![B-cart Dashboard Mockup](./assets/mockup.svg)
+
 
 ## Tech Stack
+
+<div align="center">
+  <img src="https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/Vite_8-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E" alt="Vite" />
+  <img src="https://img.shields.io/badge/Zustand-764ABC?style=for-the-badge&logo=react&logoColor=white" alt="Zustand" />
+  <img src="https://img.shields.io/badge/React_Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white" alt="React Query" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" />
+  <img src="https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white" alt="Node" />
+  <img src="https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/PostgreSQL_15+-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+</div>
+<br/>
 
 | Layer | Technology | Why this choice |
 |-------|------------|-----------------|
