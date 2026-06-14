@@ -9,6 +9,8 @@ const env = require('./config/env');
 const errorHandler = require('./middleware/error');
 
 // Routes
+const { pool } = require('./config/db');
+const otpRoutes            = require('./routes/otp.routes');
 const healthRoutes         = require('./modules/health/health.routes');
 const authRoutes           = require('./modules/auth/auth.routes');
 const usersRoutes          = require('./modules/users/users.routes');
@@ -65,6 +67,7 @@ app.use('/api/auth/login', authLimiter);
 // ── Routes ──────────────────────────────────────────────────
 app.use('/api/health',         healthRoutes);
 app.use('/api/auth',           authRoutes);
+app.use('/api/auth',           otpRoutes(pool));
 app.use('/api/users',          usersRoutes);
 app.use('/api/products',       productsRoutes);
 app.use('/api/categories',     categoriesRoutes);

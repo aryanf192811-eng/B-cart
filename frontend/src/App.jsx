@@ -4,6 +4,7 @@ import { useAuth } from './store/auth';
 import AppLayout from './layouts/AppLayout';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
+import ForgotPassword from './pages/auth/ForgotPassword';
 import SalesList from './features/sales/SalesList';
 import SalesForm from './features/sales/SalesForm';
 import PurchaseList from './features/purchase/PurchaseList';
@@ -59,6 +60,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route
         path="/*"
         element={

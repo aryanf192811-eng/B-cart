@@ -119,7 +119,7 @@ export default function Login() {
           </form>
 
           <div className="mt-8 flex items-center justify-center gap-3 text-[12px] text-steel">
-            <a href="#" className="hover:text-ink transition-colors">Forgot password</a>
+            <Link to="/forgot-password" className="hover:text-ink transition-colors">Forgot Password?</Link>
             <span className="text-rule2">|</span>
             <Link to="/signup" className="hover:text-ink transition-colors">Create an account</Link>
           </div>
