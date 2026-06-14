@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 650" width="100%" height="100%">
+  <!-- Window Background -->
+  <rect width="1000" height="650" rx="12" fill="#F4F4F5" />
+  
+  <!-- Window Controls -->
+  <circle cx="20" cy="20" r="6" fill="#FF5F56" />
+  <circle cx="40" cy="20" r="6" fill="#FFBD2E" />
+  <circle cx="60" cy="20" r="6" fill="#27C93F" />
+
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="220" height="650" rx="12" fill="#18181B" clip-path="inset(0 0 0 0 round 12px 0 0 12px)"/>
+  
+  <!-- Logo -->
+  <text x="25" y="45" font-family="-apple-system, sans-serif" font-weight="bold" font-size="22" fill="#FFFFFF" letter-spacing="-0.5">B-cart ERP</text>
+
+  <!-- Sidebar Navigation -->
+  <rect x="15" y="80" width="190" height="38" rx="8" fill="#27272A" />
+  <text x="50" y="104" font-family="-apple-system, sans-serif" font-weight="600" font-size="14" fill="#FFFFFF">Dashboard</text>
+  
+  <text x="50" y="154" font-family="-apple-system, sans-serif" font-weight="500" font-size="14" fill="#A1A1AA">Inventory</text>
+  <text x="50" y="204" font-family="-apple-system, sans-serif" font-weight="500" font-size="14" fill="#A1A1AA">Sales Orders</text>
+  <text x="50" y="254" font-family="-apple-system, sans-serif" font-weight="500" font-size="14" fill="#A1A1AA">Purchase</text>
+  <text x="50" y="304" font-family="-apple-system, sans-serif" font-weight="500" font-size="14" fill="#A1A1AA">Manufacturing</text>
+  <text x="50" y="354" font-family="-apple-system, sans-serif" font-weight="500" font-size="14" fill="#A1A1AA">Reports</text>
+
+  <!-- Icons in Sidebar -->
+  <rect x="25" y="90" width="14" height="14" rx="3" fill="#FFFFFF" opacity="0.8"/>
+  <rect x="25" y="140" width="14" height="14" rx="3" fill="#A1A1AA" opacity="0.6"/>
+  <rect x="25" y="190" width="14" height="14" rx="3" fill="#A1A1AA" opacity="0.6"/>
+  <rect x="25" y="240" width="14" height="14" rx="3" fill="#A1A1AA" opacity="0.6"/>
+  <rect x="25" y="290" width="14" height="14" rx="3" fill="#A1A1AA" opacity="0.6"/>
+  <rect x="25" y="340" width="14" height="14" rx="3" fill="#A1A1AA" opacity="0.6"/>
+
+  <!-- Topbar -->
+  <rect x="220" y="0" width="780" height="60" fill="#FFFFFF" clip-path="inset(0 0 0 0 round 0 12px 0 0)"/>
+  <line x1="220" y1="60" x2="1000" y2="60" stroke="#E4E4E7" stroke-width="1"/>
+  
+  <text x="250" y="35" font-family="-apple-system, sans-serif" font-weight="600" font-size="16" fill="#18181B">Overview</text>
+
+  <!-- Search Bar -->
+  <rect x="420" y="15" width="300" height="32" rx="16" fill="#F4F4F5" />
+  <text x="440" y="35" font-family="-apple-system, sans-serif" font-size="13" fill="#71717A">Search SO, PO, MO, product...</text>
+  <rect x="670" y="20" width="40" height="22" rx="4" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1"/>
+  <text x="676" y="35" font-family="-apple-system, monospace" font-size="11" fill="#71717A">Cmd+K</text>
+
+  <!-- User Avatar -->
+  <circle cx="950" cy="30" r="15" fill="#E4E4E7" />
+  <text x="944" y="35" font-family="-apple-system, sans-serif" font-weight="600" font-size="12" fill="#71717A">A</text>
+
+  <!-- Content Area -->
+  
+  <!-- Stats Cards -->
+  <!-- Card 1 -->
+  <rect x="250" y="90" width="170" height="90" rx="12" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1"/>
+  <text x="270" y="120" font-family="-apple-system, sans-serif" font-weight="500" font-size="13" fill="#71717A">Total Sales</text>
+  <text x="270" y="150" font-family="-apple-system, sans-serif" font-weight="700" font-size="24" fill="#18181B">₹ 1.2M</text>
+  <text x="375" y="150" font-family="-apple-system, sans-serif" font-weight="600" font-size="12" fill="#10B981">+12%</text>
+
+  <!-- Card 2 -->
+  <rect x="440" y="90" width="170" height="90" rx="12" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1"/>
+  <text x="460" y="120" font-family="-apple-system, sans-serif" font-weight="500" font-size="13" fill="#71717A">Active Orders</text>
+  <text x="460" y="150" font-family="-apple-system, sans-serif" font-weight="700" font-size="24" fill="#18181B">48</text>
+
+  <!-- Card 3 -->
+  <rect x="630" y="90" width="170" height="90" rx="12" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1"/>
+  <text x="650" y="120" font-family="-apple-system, sans-serif" font-weight="500" font-size="13" fill="#71717A">Low Stock Items</text>
+  <text x="650" y="150" font-family="-apple-system, sans-serif" font-weight="700" font-size="24" fill="#EF4444">12</text>
+  <text x="685" y="150" font-family="-apple-system, sans-serif" font-weight="600" font-size="12" fill="#EF4444">Alert</text>
+
+  <!-- Card 4 -->
+  <rect x="820" y="90" width="150" height="90" rx="12" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1"/>
+  <text x="840" y="120" font-family="-apple-system, sans-serif" font-weight="500" font-size="13" fill="#71717A">Pending MO</text>
+  <text x="840" y="150" font-family="-apple-system, sans-serif" font-weight="700" font-size="24" fill="#18181B">7</text>
+
+  <!-- Chart Section -->
+  <rect x="250" y="210" width="450" height="250" rx="12" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1"/>
+  <text x="270" y="240" font-family="-apple-system, sans-serif" font-weight="600" font-size="15" fill="#18181B">Revenue Trend</text>
+  <!-- Chart Axes -->
+  <line x1="290" y1="410" x2="660" y2="410" stroke="#E4E4E7" stroke-width="1"/>
+  <!-- Chart Line -->
+  <path d="M 290 380 L 350 350 L 410 370 L 470 290 L 530 310 L 590 260 L 650 250" fill="none" stroke="#18181B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Chart Fill Area -->
+  <path d="M 290 380 L 350 350 L 410 370 L 470 290 L 530 310 L 590 260 L 650 250 L 650 410 L 290 410 Z" fill="#F4F4F5" opacity="0.6"/>
+
+  <!-- Recent Orders Table -->
+  <rect x="720" y="210" width="250" height="250" rx="12" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1"/>
+  <text x="740" y="240" font-family="-apple-system, sans-serif" font-weight="600" font-size="15" fill="#18181B">Recent Activity</text>
+  
+  <line x1="720" y1="260" x2="970" y2="260" stroke="#E4E4E7" stroke-width="1"/>
+  
+  <!-- Row 1 -->
+  <rect x="740" y="275" width="8" height="8" rx="4" fill="#10B981"/>
+  <text x="760" y="283" font-family="-apple-system, sans-serif" font-weight="500" font-size="13" fill="#18181B">SO-1029 Confirmed</text>
+  <text x="760" y="298" font-family="-apple-system, sans-serif" font-size="11" fill="#71717A">2 mins ago</text>
+
+  <!-- Row 2 -->
+  <rect x="740" y="325" width="8" height="8" rx="4" fill="#3B82F6"/>
+  <text x="760" y="333" font-family="-apple-system, sans-serif" font-weight="500" font-size="13" fill="#18181B">PO-0492 Received</text>
+  <text x="760" y="348" font-family="-apple-system, sans-serif" font-size="11" fill="#71717A">45 mins ago</text>
+
+  <!-- Row 3 -->
+  <rect x="740" y="375" width="8" height="8" rx="4" fill="#F59E0B"/>
+  <text x="760" y="383" font-family="-apple-system, sans-serif" font-weight="500" font-size="13" fill="#18181B">MO-2201 Started</text>
+  <text x="760" y="398" font-family="-apple-system, sans-serif" font-size="11" fill="#71717A">3 hours ago</text>
+
+  <!-- Bottom Data Grid / Inventory -->
+  <rect x="250" y="480" width="720" height="140" rx="12" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1"/>
+  <text x="270" y="510" font-family="-apple-system, sans-serif" font-weight="600" font-size="15" fill="#18181B">Inventory Overview</text>
+  <line x1="250" y1="530" x2="970" y2="530" stroke="#E4E4E7" stroke-width="1"/>
+  
+  <text x="270" y="550" font-family="-apple-system, sans-serif" font-weight="600" font-size="12" fill="#71717A">ITEM</text>
+  <text x="500" y="550" font-family="-apple-system, sans-serif" font-weight="600" font-size="12" fill="#71717A">SKU</text>
+  <text x="650" y="550" font-family="-apple-system, sans-serif" font-weight="600" font-size="12" fill="#71717A">STOCK</text>
+  <text x="800" y="550" font-family="-apple-system, sans-serif" font-weight="600" font-size="12" fill="#71717A">STATUS</text>
+
+  <!-- Row 1 -->
+  <text x="270" y="580" font-family="-apple-system, sans-serif" font-size="13" fill="#18181B">Premium Cotton Fabric</text>
+  <text x="500" y="580" font-family="-apple-system, sans-serif" font-size="13" fill="#71717A">MAT-001</text>
+  <text x="650" y="580" font-family="-apple-system, sans-serif" font-weight="500" font-size="13" fill="#18181B">1,240 m</text>
+  <rect x="800" y="567" width="55" height="20" rx="10" fill="#D1FAE5"/>
+  <text x="810" y="581" font-family="-apple-system, sans-serif" font-weight="600" font-size="10" fill="#065F46">In Stock</text>
+
+  <!-- Row 2 -->
+  <text x="270" y="610" font-family="-apple-system, sans-serif" font-size="13" fill="#18181B">Wooden Chair Legs (Oak)</text>
+  <text x="500" y="610" font-family="-apple-system, sans-serif" font-size="13" fill="#71717A">MAT-089</text>
+  <text x="650" y="610" font-family="-apple-system, sans-serif" font-weight="500" font-size="13" fill="#EF4444">42 pcs</text>
+  <rect x="800" y="597" width="65" height="20" rx="10" fill="#FEE2E2"/>
+  <text x="810" y="611" font-family="-apple-system, sans-serif" font-weight="600" font-size="10" fill="#991B1B">Low Stock</text>
+
+</svg>

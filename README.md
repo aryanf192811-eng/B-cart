@@ -9,7 +9,7 @@ A lightweight, transactional Enterprise Resource Planning backend and React inte
 - **Intelligent Procurement:** Automated Purchase Order logic driven by Minimum Order Quantities (MOQ) and reorder points.
 
 ## Screenshots
-<!-- Add screenshots here -->
+![B-cart Dashboard Mockup](./assets/mockup.svg)
 
 ## Tech Stack
 
