@@ -23,7 +23,7 @@
  */
 
 const crypto = require("crypto");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const { sendOTP } = require("../services/sms.service");
 
 /* ── You import your existing db pool in routes ── */
