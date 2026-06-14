@@ -156,6 +156,28 @@ VALUES ('PO-000005', 4, 3, 'fully_received', 3000.00, '2026-06-08', '2026-06-07 
 INSERT INTO po_lines (po_id, product_id, qty_ordered, qty_received, rejected_qty, unit_price) VALUES
   (5, 5, 100.000, 100.000, 0.000, 30.00);
 
+-- PO-000006: Plastofact IN, on-time but poor quality
+INSERT INTO purchase_orders (po_number, vendor_id, responsible_id, status, total_amount, expected_delivery_date, received_at, source_type, created_by, created_at)
+VALUES ('PO-000006', 2, 3, 'fully_received', 12000.00, '2026-06-02', '2026-06-01 10:00:00+05:30', 'manual', 3, '2026-05-25 09:00:00+05:30');
+
+INSERT INTO po_lines (po_id, product_id, qty_ordered, qty_received, rejected_qty, unit_price) VALUES
+  (6, 6, 100.000, 100.000, 15.000, 120.00);
+
+-- PO-000007: Plastofact IN, late
+INSERT INTO purchase_orders (po_number, vendor_id, responsible_id, status, total_amount, expected_delivery_date, received_at, source_type, created_by, created_at)
+VALUES ('PO-000007', 2, 3, 'fully_received', 6000.00, '2026-06-10', '2026-06-13 14:00:00+05:30', 'manual', 3, '2026-06-01 09:00:00+05:30');
+
+INSERT INTO po_lines (po_id, product_id, qty_ordered, qty_received, rejected_qty, unit_price) VALUES
+  (7, 6, 50.000, 50.000, 2.000, 120.00);
+
+-- PO-000008: ORM Metals, perfect score
+INSERT INTO purchase_orders (po_number, vendor_id, responsible_id, status, total_amount, expected_delivery_date, received_at, source_type, created_by, created_at)
+VALUES ('PO-000008', 3, 3, 'fully_received', 15000.00, '2026-06-12', '2026-06-11 09:00:00+05:30', 'manual', 3, '2026-06-05 09:00:00+05:30');
+
+-- Let's pretend ORM Metals supplies product 2 (Office Chair) just for mockup
+INSERT INTO po_lines (po_id, product_id, qty_ordered, qty_received, rejected_qty, unit_price) VALUES
+  (8, 2, 5.000, 5.000, 0.000, 3000.00);
+
 -- ============================================================
 -- Stock Ledger — IN moves for received POs
 -- ============================================================
@@ -181,6 +203,30 @@ INSERT INTO stock_ledger (product_id, move_type, qty, reference_type, reference_
 -- PO-000005 received
 INSERT INTO stock_ledger (product_id, move_type, qty, reference_type, reference_id, reference_number, balance_after, notes, created_by, created_at) VALUES
   (5, 'IN', 100.000, 'PO', 5, 'PO-000005', 200.000, 'PO receipt', 3, '2026-06-07 09:00:00+05:30');
+
+-- PO-000006 received
+INSERT INTO stock_ledger (product_id, move_type, qty, reference_type, reference_id, reference_number, balance_after, notes, created_by, created_at) VALUES
+  (6, 'IN', 85.000, 'PO', 6, 'PO-000006', 85.000, 'PO receipt (15 rejected)', 3, '2026-06-01 10:00:00+05:30');
+
+-- PO-000007 received
+INSERT INTO stock_ledger (product_id, move_type, qty, reference_type, reference_id, reference_number, balance_after, notes, created_by, created_at) VALUES
+  (6, 'IN', 48.000, 'PO', 7, 'PO-000007', 133.000, 'PO receipt (2 rejected)', 3, '2026-06-13 14:00:00+05:30');
+
+-- PO-000008 received
+INSERT INTO stock_ledger (product_id, move_type, qty, reference_type, reference_id, reference_number, balance_after, notes, created_by, created_at) VALUES
+  (2, 'IN', 5.000, 'PO', 8, 'PO-000008', 5.000, 'PO receipt', 3, '2026-06-11 09:00:00+05:30');
+
+-- ============================================================
+-- Smart Procurement Mockup Data (OUT stock moves last 30d)
+-- ============================================================
+-- Fabric (FB-001) high consumption
+INSERT INTO stock_ledger (product_id, move_type, qty, reference_type, reference_id, reference_number, balance_after, notes, created_by, created_at) VALUES
+  (6, 'OUT', 50.000, 'MO', 99, 'MO-DEMO', 83.000, 'MO Consumption', 4, NOW() - INTERVAL '10 days'),
+  (6, 'OUT', 40.000, 'MO', 99, 'MO-DEMO', 43.000, 'MO Consumption', 4, NOW() - INTERVAL '4 days'),
+  (6, 'OUT', 35.000, 'MO', 99, 'MO-DEMO', 8.000, 'MO Consumption', 4, NOW() - INTERVAL '1 days');
+-- Wait, we need to make sure on_hand_qty in products matches these!
+-- Fabric on_hand_qty in seed is 50. So 133 - 50 - 40 - 35 = 8.
+-- Let's update the final UPDATE products SET at the bottom of the script.
 
 -- ============================================================
 -- Demo Sales Orders
@@ -227,7 +273,7 @@ UPDATE products SET on_hand_qty = 10.000 WHERE sku = 'OC-001'; -- after selling 
 -- WL-001: 80 (current on-hand as seeded)
 -- WT-001: 15 (current on-hand as seeded) 
 -- SC-001: 200 (current on-hand as seeded)
--- FB-001: 35 (current on-hand as seeded)
+UPDATE products SET on_hand_qty = 8.000 WHERE sku = 'FB-001'; -- After the new mockup OUT moves for Fabric
 
 -- ============================================================
 -- Demo Completed Manufacturing Order for Product Passports
