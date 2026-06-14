@@ -61,14 +61,13 @@ function NavItem({ item }) {
     <NavLink
       to={item.path}
       end={item.path === '/'}
-      style={{ textDecoration: 'none' }}
       className={({ isActive }) => clsx(
         'flex items-center gap-2.5 mx-2 px-3 rounded-xl transition-all duration-150 group relative',
         isActive
           ? 'bg-white text-ink shadow-sm font-semibold'
           : 'text-[var(--on-surface-variant)] hover:bg-white/60 hover:text-[var(--on-surface)]'
       )}
-      style={{ height: '34px', fontSize: '13px', fontFamily: 'var(--font-sans)', fontWeight: 500 }}
+      style={{ textDecoration: 'none', height: '34px', fontSize: '13px', fontFamily: 'var(--font-sans)', fontWeight: 500 }}
     >
       {({ isActive }) => (
         <>
