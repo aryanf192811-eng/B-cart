@@ -2,7 +2,7 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../store/auth';
 import { useState, useEffect } from 'react';
 import Chatbot from '../components/Chatbot';
-import CommandPalette from '../components/CommandPalette';
+import GlobalSearch from '../components/GlobalSearch';
 import ErrorBoundary from '../components/ErrorBoundary';
 import Avatar from '../components/Avatar';
 import { 
@@ -95,19 +95,6 @@ export default function AppLayout() {
   const { connected } = useSocket();
   const location = useLocation();
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isCmdOpen, setIsCmdOpen] = useState(false);
-
-  // Command palette hotkey
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.metaKey && e.key === 'k') {
-        e.preventDefault();
-        setIsCmdOpen(true);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   // Determine current section name for breadcrumbs
   let currentSection = 'Dashboard';
@@ -292,49 +279,8 @@ export default function AppLayout() {
             {currentSection}
           </div>
 
-          {/* Search bar (pill shape) */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <input
-              type="text"
-              placeholder="Search SO, PO, MO, product..."
-              style={{
-                height: '34px',
-                padding: '0 36px 0 14px',
-                background: 'var(--surface-container-low)',
-                border: '1px solid var(--outline-variant)',
-                borderRadius: '9999px',
-                fontFamily: 'var(--font-sans)',
-                fontSize: '13px',
-                color: 'var(--on-surface)',
-                width: '280px',
-                transition: 'all 150ms',
-                outline: 'none',
-              }}
-              onFocus={e => {
-                e.target.style.borderColor = 'var(--secondary)';
-                e.target.style.width = '340px';
-                e.target.style.boxShadow = '0 0 0 3px rgba(78,97,110,0.12)';
-                e.target.style.background = 'var(--surface-container-lowest)';
-              }}
-              onBlur={e => {
-                e.target.style.borderColor = 'var(--outline-variant)';
-                e.target.style.width = '280px';
-                e.target.style.boxShadow = 'none';
-                e.target.style.background = 'var(--surface-container-low)';
-              }}
-              onClick={() => setIsCmdOpen(true)}
-              onChange={() => setIsCmdOpen(true)}
-              onKeyDown={e => { if (e.metaKey && e.key === 'k') { e.preventDefault(); setIsCmdOpen(true); } }}
-            />
-            <div style={{
-              position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-              fontFamily: 'ui-monospace, monospace', fontSize: '10px', color: 'var(--outline)',
-              padding: '1px 5px', border: '1px solid var(--outline-variant)', borderRadius: '5px',
-              pointerEvents: 'none',
-            }}>
-              ⌘K
-            </div>
-          </div>
+          {/* Search bar */}
+          <GlobalSearch />
 
           {/* Right actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -456,8 +402,6 @@ export default function AppLayout() {
           </button>
         )}
       </>
-
-      <CommandPalette isOpen={isCmdOpen} onClose={() => setIsCmdOpen(false)} />
     </div>
   );
 }
