@@ -83,7 +83,7 @@ router.post('/adjust',
         await writeStockMove(client, {
           productId: product_id,
           moveType: 'ADJUST',
-          qty: Math.abs(delta_qty),
+          qty: delta_qty,
           referenceType: 'MANUAL',
           referenceNumber: 'MANUAL',
           userId: req.user.id,
