@@ -20,12 +20,12 @@ router.get('/procurement-alerts',
       const { rows } = await query(`
         SELECT * FROM smart_procurement_view
         WHERE (days_remaining IS NOT NULL AND days_remaining < lead_time_days)
-           OR on_hand_qty < min_stock_qty
+           OR (on_hand_qty + incoming_qty) < min_stock_qty
         ORDER BY days_remaining ASC NULLS LAST
       `);
 
-      const critical_count = rows.filter(r => parseFloat(r.on_hand_qty) < parseFloat(r.min_stock_qty)).length;
-      const warning_count = rows.filter(r => r.days_remaining !== null && parseFloat(r.days_remaining) < parseFloat(r.lead_time_days) && parseFloat(r.on_hand_qty) >= parseFloat(r.min_stock_qty)).length;
+      const critical_count = rows.filter(r => (parseFloat(r.on_hand_qty) + parseFloat(r.incoming_qty)) < parseFloat(r.min_stock_qty)).length;
+      const warning_count = rows.filter(r => r.days_remaining !== null && parseFloat(r.days_remaining) < parseFloat(r.lead_time_days) && (parseFloat(r.on_hand_qty) + parseFloat(r.incoming_qty)) >= parseFloat(r.min_stock_qty)).length;
 
       res.json({ rows, summary: { critical_count, warning_count } });
     } catch (err) { next(err); }

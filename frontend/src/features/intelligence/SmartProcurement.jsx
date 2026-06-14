@@ -40,6 +40,7 @@ export default function SmartProcurement() {
             <tr className="bg-paper2">
               <th className="px-4 py-3">PRODUCT</th>
               <th className="px-4 py-3 text-right">CURRENT STOCK</th>
+              <th className="px-4 py-3 text-right">INCOMING STOCK</th>
               <th className="px-4 py-3 text-right">AVG DAILY USE</th>
               <th className="px-4 py-3 text-right">DAYS LEFT</th>
               <th className="px-4 py-3 text-right">RECOMMENDED ORDER</th>
@@ -57,6 +58,7 @@ export default function SmartProcurement() {
                 <tr key={i} className="border-b-[0.5px] border-rule">
                   <td className="px-4 py-3 font-medium text-ink">{a.name}</td>
                   <td className="px-4 py-3 font-mono text-right">{a.on_hand_qty}</td>
+                  <td className="px-4 py-3 font-mono text-right text-success">{a.incoming_qty || 0}</td>
                   <td className="px-4 py-3 font-mono text-right">{parseFloat(a.avg_daily_consumption || 0).toFixed(1)}</td>
                   <td className="px-4 py-3 text-right">
                     <span className={`font-mono px-2 py-0.5 rounded border-[0.5px] ${riskColor}`}>
@@ -78,7 +80,7 @@ export default function SmartProcurement() {
             })}
             {alerts?.length === 0 && (
               <tr>
-                <td colSpan="7" className="px-4 py-8 text-center text-steel2">No procurement alerts.</td>
+                <td colSpan="8" className="px-4 py-8 text-center text-steel2">No procurement alerts.</td>
               </tr>
             )}
           </tbody>

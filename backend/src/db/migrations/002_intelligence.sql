@@ -56,7 +56,7 @@ SELECT
     (SELECT SUM(pol.qty_ordered - COALESCE(pol.qty_received, 0)) 
      FROM po_lines pol
      JOIN purchase_orders po ON po.id = pol.po_id
-     WHERE pol.product_id = p.id AND po.status NOT IN ('draft', 'fully_received', 'cancelled')
+     WHERE pol.product_id = p.id AND po.status NOT IN ('fully_received', 'cancelled')
     ), 0
   ) AS incoming_qty,
   p.min_stock_qty,
@@ -77,7 +77,7 @@ SELECT
             (SELECT SUM(pol.qty_ordered - COALESCE(pol.qty_received, 0)) 
              FROM po_lines pol
              JOIN purchase_orders po ON po.id = pol.po_id
-             WHERE pol.product_id = p.id AND po.status NOT IN ('draft', 'fully_received', 'cancelled')
+             WHERE pol.product_id = p.id AND po.status NOT IN ('fully_received', 'cancelled')
             ), 0
           )
          ) / ((SELECT SUM(qty) FROM stock_ledger
@@ -95,7 +95,7 @@ SELECT
             (SELECT SUM(pol.qty_ordered - COALESCE(pol.qty_received, 0)) 
              FROM po_lines pol
              JOIN purchase_orders po ON po.id = pol.po_id
-             WHERE pol.product_id = p.id AND po.status NOT IN ('draft', 'fully_received', 'cancelled')
+             WHERE pol.product_id = p.id AND po.status NOT IN ('fully_received', 'cancelled')
             ), 0
           )
     )
