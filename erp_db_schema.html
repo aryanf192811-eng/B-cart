@@ -1,0 +1,220 @@
+
+<div id="erd" style="padding:8px 0"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '12px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    primaryColor: dark ? '#2d3748' : '#EAF3DE',
+    primaryBorderColor: dark ? '#4a5568' : '#639922',
+    secondaryColor: dark ? '#1a202c' : '#E6F1FB',
+    tertiaryColor: dark ? '#2a2c35' : '#F1EFE8',
+  },
+});
+const { svg } = await mermaid.render('erd-svg', `erDiagram
+  USERS ||--o{ SALES_ORDERS : creates
+  USERS ||--o{ PURCHASE_ORDERS : creates
+  USERS ||--o{ MANUFACTURING_ORDERS : creates
+  USERS ||--o{ AUDIT_LOGS : generates
+  ROLES ||--o{ USERS : assigns
+  PRODUCTS ||--o{ BOM : "produced by"
+  PRODUCTS ||--o{ SO_LINES : "sold in"
+  PRODUCTS ||--o{ PO_LINES : "purchased in"
+  PRODUCTS ||--o{ STOCK_LEDGER : "tracked in"
+  PRODUCTS ||--o{ BOM_COMPONENTS : "used as"
+  PRODUCTS ||--o{ MO_COMPONENTS : "consumed in"
+  VENDORS ||--o{ PURCHASE_ORDERS : fulfills
+  VENDORS ||--o{ PRODUCTS : "default supplier"
+  CUSTOMERS ||--o{ SALES_ORDERS : places
+  SALES_ORDERS ||--|{ SO_LINES : contains
+  PURCHASE_ORDERS ||--|{ PO_LINES : contains
+  BOM ||--|{ BOM_COMPONENTS : defines
+  BOM ||--|{ BOM_OPERATIONS : defines
+  BOM_OPERATIONS }o--|| WORK_CENTERS : uses
+  MANUFACTURING_ORDERS ||--|{ WORK_ORDERS : breaks into
+  MANUFACTURING_ORDERS ||--|{ MO_COMPONENTS : requires
+  WORK_ORDERS }o--|| WORK_CENTERS : runs at
+  USERS {
+    int id PK
+    string email
+    string password_hash
+    int role_id FK
+    bool is_active
+  }
+  ROLES {
+    int id PK
+    string name
+    json permissions
+  }
+  PRODUCTS {
+    int id PK
+    string sku
+    string name
+    decimal sales_price
+    decimal cost_price
+    decimal on_hand_qty
+    decimal reserved_qty
+    decimal min_stock_qty
+    enum procurement_strategy
+    enum procurement_type
+    int default_vendor_id FK
+    int default_bom_id FK
+    bool procure_on_demand
+  }
+  VENDORS {
+    int id PK
+    string name
+    string email
+    decimal on_time_rate
+    int total_orders
+  }
+  CUSTOMERS {
+    int id PK
+    string name
+    string email
+    string phone
+  }
+  SALES_ORDERS {
+    int id PK
+    string so_number
+    int customer_id FK
+    enum status
+    int created_by FK
+    timestamp confirmed_at
+    decimal total_amount
+  }
+  SO_LINES {
+    int id PK
+    int so_id FK
+    int product_id FK
+    decimal qty_ordered
+    decimal qty_delivered
+    decimal unit_price
+  }
+  PURCHASE_ORDERS {
+    int id PK
+    string po_number
+    int vendor_id FK
+    enum status
+    enum source_type
+    string source_ref
+    string razorpay_order_id
+    int created_by FK
+  }
+  PO_LINES {
+    int id PK
+    int po_id FK
+    int product_id FK
+    decimal qty_ordered
+    decimal qty_received
+    decimal unit_price
+  }
+  BOM {
+    int id PK
+    int product_id FK
+    string name
+    decimal qty_produced
+  }
+  BOM_COMPONENTS {
+    int id PK
+    int bom_id FK
+    int component_id FK
+    decimal qty
+  }
+  BOM_OPERATIONS {
+    int id PK
+    int bom_id FK
+    int work_center_id FK
+    string name
+    int duration_mins
+    int sequence
+  }
+  WORK_CENTERS {
+    int id PK
+    string name
+    string code
+    int capacity_per_hour
+  }
+  MANUFACTURING_ORDERS {
+    int id PK
+    string mo_number
+    int product_id FK
+    int bom_id FK
+    decimal qty
+    enum status
+    int assigned_to FK
+    enum source_type
+    string source_ref
+    date scheduled_date
+  }
+  WORK_ORDERS {
+    int id PK
+    int mo_id FK
+    int work_center_id FK
+    string operation_name
+    int duration_mins
+    enum status
+    int sequence
+  }
+  MO_COMPONENTS {
+    int id PK
+    int mo_id FK
+    int component_id FK
+    decimal qty_required
+    decimal qty_consumed
+  }
+  STOCK_LEDGER {
+    int id PK
+    int product_id FK
+    enum move_type
+    decimal qty
+    string reference_type
+    int reference_id
+    decimal balance_after
+    int created_by FK
+    timestamp created_at
+  }
+  AUDIT_LOGS {
+    int id PK
+    int user_id FK
+    string action
+    string entity_type
+    int entity_id
+    json old_value
+    json new_value
+    timestamp created_at
+  }
+`);
+document.getElementById('erd').innerHTML = svg;
+document.querySelectorAll('#erd svg .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+document.querySelectorAll('#erd svg .row-rect-odd path, #erd svg .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>
